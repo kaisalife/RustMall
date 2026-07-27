@@ -253,8 +253,9 @@ services:
       APP_PAYMENT_SERVICE__PORT: "50056"
       APP_REDIS__URL: redis://redis:6379
       APP_KAFKA__BROKERS: "kafka:9092"
-    ports:
-      - "8080:8080"
+    # 不暴露端口，仅通过 nginx 访问
+    expose:
+      - "8080"
     depends_on:
       - auth-service
       - product-service
@@ -287,6 +288,26 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: simple_trade_nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api-gateway
     logging:
       driver: json-file
       options:

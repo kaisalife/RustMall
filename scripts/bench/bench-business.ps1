@@ -12,7 +12,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$BaseUrl = "http://localhost:8080"
+$BaseUrl = "http://localhost"
 
 # 测试账号
 $TestEmail = "bench@test.com"
