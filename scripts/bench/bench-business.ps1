@@ -14,6 +14,10 @@ param(
 $ErrorActionPreference = "Stop"
 $BaseUrl = "http://localhost"
 
+# 压测限流旁路 header（nginx 识别后跳过 limit_req）
+$BypassHeader = @{ "X-Bench-Bypass" = "bench-secret-2024" }
+$OhaBypass = "-H 'X-Bench-Bypass: bench-secret-2024'"
+
 # 测试账号
 $TestEmail = "bench@test.com"
 $TestPassword = "Bench@123456"
@@ -50,7 +54,7 @@ Write-Step "阶段 1: 数据初始化"
 Write-Host "注册测试用户..." -ForegroundColor Yellow
 $registerBody = @{ email = $TestEmail; password = $TestPassword; nickname = $TestNickname } | ConvertTo-Json
 try {
-    $registerResult = Invoke-RestMethod -Uri "$BaseUrl/api/auth/register" -Method POST -Body $registerBody -ContentType "application/json" -ErrorAction Stop
+    $registerResult = Invoke-RestMethod -Uri "$BaseUrl/api/auth/register" -Method POST -Body $registerBody -ContentType "application/json" -Headers $BypassHeader -ErrorAction Stop
     Write-Ok "用户注册成功: $($registerResult.data.user_id)"
 } catch {
     if ($_.Exception.Response.StatusCode.value__ -eq 409) {
@@ -63,7 +67,7 @@ try {
 # 1.2 登录获取 token
 Write-Host "登录获取 JWT token..." -ForegroundColor Yellow
 $loginBody = @{ email = $TestEmail; password = $TestPassword } | ConvertTo-Json
-$loginResult = Invoke-RestMethod -Uri "$BaseUrl/api/auth/login" -Method POST -Body $loginBody -ContentType "application/json" -ErrorAction Stop
+$loginResult = Invoke-RestMethod -Uri "$BaseUrl/api/auth/login" -Method POST -Body $loginBody -ContentType "application/json" -Headers $BypassHeader -ErrorAction Stop
 $Token = $loginResult.data.token
 $UserId = $loginResult.data.user_id
 $TokenPreview = if ($Token) { $Token.Substring(0, [Math]::Min(20, $Token.Length)) } else { "<empty>" }
@@ -99,7 +103,7 @@ $productBody = @{
     category_id = $CategoryId
     stock = 100000
 } | ConvertTo-Json
-$productResult = Invoke-RestMethod -Uri "$BaseUrl/api/products" -Method POST -Body $productBody -ContentType "application/json" -Headers @{ Authorization = "Bearer $Token" } -ErrorAction SilentlyContinue
+$productResult = Invoke-RestMethod -Uri "$BaseUrl/api/products" -Method POST -Body $productBody -ContentType "application/json" -Headers (@{ Authorization = "Bearer $Token" } + $BypassHeader) -ErrorAction SilentlyContinue
 if ($productResult) {
     $ProductId = $productResult.data.product_id
     Write-Ok "商品创建成功: product_id=$ProductId"
@@ -112,7 +116,7 @@ if ($productResult) {
 Write-Host "添加库存..." -ForegroundColor Yellow
 $stockBody = @{ quantity = 1000000 } | ConvertTo-Json
 try {
-    Invoke-RestMethod -Uri "$BaseUrl/api/inventory/$ProductId/add" -Method POST -Body $stockBody -ContentType "application/json" -Headers @{ Authorization = "Bearer $Token" } -ErrorAction Stop | Out-Null
+    Invoke-RestMethod -Uri "$BaseUrl/api/inventory/$ProductId/add" -Method POST -Body $stockBody -ContentType "application/json" -Headers (@{ Authorization = "Bearer $Token" } + $BypassHeader) -ErrorAction Stop | Out-Null
     Write-Ok "库存添加成功"
 } catch {
     Write-Host "库存添加跳过（可能已存在）" -ForegroundColor Yellow
@@ -182,32 +186,32 @@ function Run-Bench($title, $cmd) {
 # 2.1 登录接口压测（POST + DB 读写）
 foreach ($c in $Concurrent) {
     Run-Bench "登录接口 - ${c}并发 x ${Duration}" @"
-oha -z $Duration -c $c -m POST -d '{\"email\":\"$TestEmail\",\"password\":\"$TestPassword\"}' -H 'Content-Type: application/json' "$BaseUrl/api/auth/login"
+oha -z $Duration -c $c -m POST -d '{\"email\":\"$TestEmail\",\"password\":\"$TestPassword\"}' -H 'Content-Type: application/json' $OhaBypass "$BaseUrl/api/auth/login"
 "@
 }
 
 # 2.2 查询商品（GET + DB 读 + JWT 验证）
 foreach ($c in $Concurrent) {
-    Run-Bench "查询商品 - ${c}并发 x ${Duration}" "oha -z $Duration -c $c -H 'Authorization: Bearer $Token' `"$BaseUrl/api/products/$ProductId`""
+    Run-Bench "查询商品 - ${c}并发 x ${Duration}" "oha -z $Duration -c $c -H 'Authorization: Bearer $Token' $OhaBypass `"$BaseUrl/api/products/$ProductId`""
 }
 
 # 2.3 查询库存（GET + DB 读）
 foreach ($c in $Concurrent) {
-    Run-Bench "查询库存 - ${c}并发 x ${Duration}" "oha -z $Duration -c $c -H 'Authorization: Bearer $Token' `"$BaseUrl/api/inventory/$ProductId`""
+    Run-Bench "查询库存 - ${c}并发 x ${Duration}" "oha -z $Duration -c $c -H 'Authorization: Bearer $Token' $OhaBypass `"$BaseUrl/api/inventory/$ProductId`""
 }
 
 # 2.4 商品列表（GET + DB 分页查询）
 foreach ($c in $Concurrent) {
-    Run-Bench "商品列表 - ${c}并发 x ${Duration}" "oha -z $Duration -c $c -H 'Authorization: Bearer $Token' `"$BaseUrl/api/products?page=1&page_size=20`""
+    Run-Bench "商品列表 - ${c}并发 x ${Duration}" "oha -z $Duration -c $c -H 'Authorization: Bearer $Token' $OhaBypass `"$BaseUrl/api/products?page=1&page_size=20`""
 }
 
 # 2.5 创建订单（POST + DB 写 + Saga + 库存扣减）
 Run-Bench "创建订单 - 10并发 x ${Duration}（写操作降并发）" @"
-oha -z $Duration -c 10 -m POST -d '{\"user_id\":$UserId,\"items\":[{\"product_id\":$ProductId,\"quantity\":1,\"unit_price\":99.99}]}' -H 'Content-Type: application/json' -H 'Authorization: Bearer $Token' "$BaseUrl/api/orders"
+oha -z $Duration -c 10 -m POST -d '{\"user_id\":$UserId,\"items\":[{\"product_id\":$ProductId,\"quantity\":1,\"unit_price\":99.99}]}' -H 'Content-Type: application/json' -H 'Authorization: Bearer $Token' $OhaBypass "$BaseUrl/api/orders"
 "@
 
 # 2.6 健康检查（并发探测 4 个 gRPC）
-Run-Bench "健康检查 - 50并发 x ${Duration}" "oha -z $Duration -c 50 `"$BaseUrl/health`""
+Run-Bench "健康检查 - 50并发 x ${Duration}" "oha -z $Duration -c 50 $OhaBypass `"$BaseUrl/health`""
 
 # ============================================================
 # 汇总
