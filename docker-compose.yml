@@ -262,6 +262,36 @@ services:
       - inventory-service
       - payment-service
       - redis
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  log-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+      args:
+        SERVICE: log-service
+    container_name: simple_trade_log
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/simple_trade
+      APP_DATABASE__MAX_CONNECTIONS: "10"
+      APP_KAFKA__BROKERS: "kafka:9092"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
     networks:
       - simple_trade_network

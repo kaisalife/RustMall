@@ -10,6 +10,8 @@ use axum::{
 use tracing::{info, warn, error, Instrument, Level};
 use std::time::Instant;
 
+use common::request_context::{RequestId, REQUEST_ID_HEADER, inject_response_id};
+
 /// 日志中间件
 /// 
 /// 记录每个请求的：
@@ -17,14 +19,18 @@ use std::time::Instant;
 /// - 请求路径
 /// - 响应状态码
 /// - 处理时间
-pub async fn logger_middleware(request: Request<Body>, next: Next) -> Response {
+/// - request_id（注入请求扩展 + 响应头，供审计中间件和 handler 使用）
+pub async fn logger_middleware(mut request: Request<Body>, next: Next) -> Response {
     let method = request.method().clone();
     let uri = request.uri().clone();
     let path = uri.path().to_string();
     let start = Instant::now();
 
-    // 生成请求 ID（用于追踪）
+    // 生成请求 ID（用于跨服务追踪）
     let request_id = uuid::Uuid::new_v4().to_string();
+
+    // 注入到请求扩展（审计中间件和 handler 可读取）
+    request.extensions_mut().insert(RequestId(request_id.clone()));
 
     let span = tracing::span!(
         Level::INFO,
@@ -71,6 +77,10 @@ pub async fn logger_middleware(request: Request<Body>, next: Next) -> Response {
                 );
             }
         }
+
+        // 注入 request_id 到响应头（客户端可追踪）
+        let mut response = response;
+        inject_response_id(&mut response, &request_id);
 
         response
     }

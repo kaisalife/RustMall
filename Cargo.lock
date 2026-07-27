@@ -77,6 +77,7 @@ dependencies = [
  "bytes",
  "chrono",
  "common",
+ "event-bus",
  "figment",
  "futures-util",
  "http 1.4.2",
@@ -1842,6 +1843,22 @@ name = "log"
 version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
+
+[[package]]
+name = "log-service"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "common",
+ "db-migration",
+ "event-bus",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+]
 
 [[package]]
 name = "lru"
@@ -3986,8 +4003,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum 0.7.9",
+ "base64 0.22.1",
  "bytes",
  "common",
+ "event-bus",
  "futures-util",
  "http 1.4.2",
  "http-body 1.1.0",

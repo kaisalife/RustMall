@@ -20,6 +20,8 @@ thiserror.workspace = true
 anyhow.workspace = true
 common = { path = "../common" }
 idempotency = { path = "../idempotency" }
+event-bus = { path = "../event-bus" }
+base64 = "0.22"
 axum.workspace = true
 lru.workspace = true
 uuid.workspace = true

@@ -5,6 +5,7 @@ pub mod crypto;
 pub mod database;
 pub mod retry;
 pub mod tracing_init;
+pub mod request_context;
 
 pub use id::SnowflakeIdGenerator;
 pub use error::{AppError, AppResult};
@@ -13,4 +14,5 @@ pub use crypto::{hash_password, verify_password, hash_password_async, verify_pas
 pub use database::create_pool;
 pub use retry::{retry_with_backoff, retry_db};
 pub use tracing_init::init_tracing;
+pub use request_context::{RequestId, REQUEST_ID_HEADER, get_request_id, inject_response_id};
 pub use async_trait::async_trait;

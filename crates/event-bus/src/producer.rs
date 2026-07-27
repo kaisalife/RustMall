@@ -105,6 +105,8 @@ impl EventBusProducer {
                 EventPayload::RefundCompleted { .. } => super::EventType::RefundCompleted,
                 EventPayload::OrderCreated { .. } => super::EventType::OrderCreated,
                 EventPayload::InventoryDeducted { .. } => super::EventType::InventoryDeducted,
+                EventPayload::AppLog { .. } => super::EventType::AppLog,
+                EventPayload::AuditLog { .. } => super::EventType::AuditLog,
             },
             timestamp: chrono::Utc::now(),
             source: self.source.clone(),

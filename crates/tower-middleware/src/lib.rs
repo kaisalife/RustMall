@@ -11,6 +11,7 @@ pub mod auth;
 pub mod rate_limit;
 pub mod logger;
 pub mod idempotency;
+pub mod audit;
 
 pub use auth::{
     create_auth_middleware,
@@ -35,3 +36,4 @@ pub use idempotency::{
     idempotency_middleware,
     IDEMPOTENCY_HEADER,
 };
+pub use audit::{AuditLayer, AuditMiddleware};

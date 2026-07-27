@@ -4,12 +4,13 @@ use axum::{
     middleware,
     Router,
 };
-use common::{load_config, init_tracing};
+use common::{load_config, init_tracing, SnowflakeIdGenerator};
 use metrics::{MetricsMiddleware, metrics_handler};
 use tower_middleware::{
     auth::create_auth_middleware,
     rate_limit::{create_default_rate_limiter, create_rate_limit_middleware, create_strict_rate_limiter},
     logger::logger_middleware,
+    audit::AuditLayer,
     create_cors_layer,
 };
 
@@ -64,6 +65,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    // 初始化 Kafka 事件生产者（用于审计日志）
+    let event_producer = {
+        let id_generator = Arc::new(SnowflakeIdGenerator::new(10).expect("Failed to create ID generator"));
+        match event_bus::EventBusProducer::new(
+            &config.kafka.brokers,
+            "api-gateway",
+            &config.kafka.topic_prefix,
+            id_generator,
+        ) {
+            Ok(producer) => {
+                tracing::info!("Kafka event producer initialized (audit logging enabled)");
+                Some(producer)
+            }
+            Err(e) => {
+                tracing::warn!("Failed to init Kafka producer, audit logging disabled: {}", e);
+                None
+            }
+        }
+    };
+
     // 创建应用状态
     let app_state = Arc::new(AppState::new(config.clone(), clients, cache));
 
@@ -113,6 +134,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Prometheus 指标端点
         .route("/metrics", axum::routing::get(metrics_handler))
         // 全局中间件
+        .layer(AuditLayer::new(event_producer))
         .layer(MetricsMiddleware::new())
         .layer(middleware::from_fn(logger_middleware))
         .layer(create_cors_layer(config.gateway.cors_origins.clone()))

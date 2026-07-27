@@ -61,6 +61,31 @@ pub enum EventPayload {
         product_id: u64,
         quantity: i64,
     },
+    /// 应用日志（各服务发送到 Kafka，由 log-service 消费写入 PostgreSQL）
+    AppLog {
+        level: String,
+        message: String,
+        request_id: Option<String>,
+        trace_id: Option<String>,
+        span_id: Option<String>,
+        user_id: Option<u64>,
+        fields: serde_json::Value,
+        file: Option<String>,
+        line: Option<u32>,
+    },
+    /// 审计日志（记录用户敏感操作）
+    AuditLog {
+        user_id: Option<u64>,
+        action: String,
+        resource_type: Option<String>,
+        resource_id: Option<String>,
+        request_id: Option<String>,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+        details: serde_json::Value,
+        status: String,
+        error_message: Option<String>,
+    },
 }
 
 impl EventPayload {
@@ -75,6 +100,8 @@ impl EventPayload {
             EventPayload::RefundCompleted { .. } => "refund_completed",
             EventPayload::OrderCreated { .. } => "order_created",
             EventPayload::InventoryDeducted { .. } => "inventory_deducted",
+            EventPayload::AppLog { .. } => "app_log",
+            EventPayload::AuditLog { .. } => "audit_log",
         };
         format!("{}.{}", prefix, name)
     }
@@ -104,6 +131,8 @@ pub enum EventType {
     RefundCompleted,
     OrderCreated,
     InventoryDeducted,
+    AppLog,
+    AuditLog,
 }
 
 #[cfg(test)]
