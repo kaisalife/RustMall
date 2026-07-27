@@ -1,0 +1,36 @@
+[package]
+name = "payment-service"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+tokio.workspace = true
+tonic.workspace = true
+sqlx.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+figment.workspace = true
+async-trait.workspace = true
+rust_decimal.workspace = true
+rust_decimal_macros.workspace = true
+
+common = { path = "../../crates/common" }
+proto = { path = "../../crates/proto" }
+idempotency = { path = "../../crates/idempotency" }
+event-bus = { path = "../../crates/event-bus" }
+
+[[bin]]
+name = "payment-service"
+path = "src/main.rs"
+
+[[bench]]
+name = "money_benchmark"
+harness = false
+
+[dev-dependencies]
+criterion.workspace = true

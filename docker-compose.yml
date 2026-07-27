@@ -1,0 +1,275 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: simple_trade_postgres
+    command: postgres -c max_connections=300
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: simple_trade
+      TZ: Asia/Shanghai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: simple_trade_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@simple-trade.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: simple_trade_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  kafka:
+    image: apache/kafka:3.7.1
+    container_name: simple_trade_kafka
+    environment:
+      # KRaft 模式配置（无需 Zookeeper）
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: "controller,broker"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      # 单节点配置
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_NUM_PARTITIONS: "3"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+    ports:
+      - "9092:9092"
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  # Kafka 管理界面（可选，方便调试）
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: simple_trade_kafka_ui
+    environment:
+      KAFKA_CLUSTERS_0_NAME: "simple-trade"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9092"
+    ports:
+      - "9090:8080"
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+      args:
+        SERVICE: auth-service
+    container_name: simple_trade_auth
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/simple_trade
+      APP_AUTH_SERVICE__HOST: 0.0.0.0
+      APP_AUTH_SERVICE__PORT: "50051"
+      APP_DATABASE__MAX_CONNECTIONS: "20"
+      APP_KAFKA__BROKERS: "kafka:9092"
+    ports:
+      - "50051:50051"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  product-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+      args:
+        SERVICE: product-service
+    container_name: simple_trade_product
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/simple_trade
+      APP_PRODUCT_SERVICE__HOST: 0.0.0.0
+      APP_PRODUCT_SERVICE__PORT: "50052"
+      APP_DATABASE__MAX_CONNECTIONS: "40"
+      APP_KAFKA__BROKERS: "kafka:9092"
+    ports:
+      - "50052:50052"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  order-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+      args:
+        SERVICE: order-service
+    container_name: simple_trade_order
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/simple_trade
+      APP_ORDER_SERVICE__HOST: 0.0.0.0
+      APP_ORDER_SERVICE__PORT: "50053"
+      APP_DATABASE__MAX_CONNECTIONS: "30"
+      APP_KAFKA__BROKERS: "kafka:9092"
+    ports:
+      - "50053:50053"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+      args:
+        SERVICE: inventory-service
+    container_name: simple_trade_inventory
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/simple_trade
+      APP_INVENTORY_SERVICE__HOST: 0.0.0.0
+      APP_INVENTORY_SERVICE__PORT: "50054"
+      APP_DATABASE__MAX_CONNECTIONS: "30"
+      APP_KAFKA__BROKERS: "kafka:9092"
+    ports:
+      - "50054:50054"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  email-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+      args:
+        SERVICE: email-service
+    container_name: simple_trade_email
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/simple_trade
+      APP_EMAIL_SERVICE__HOST: 0.0.0.0
+      APP_EMAIL_SERVICE__PORT: "50055"
+      APP_DATABASE__MAX_CONNECTIONS: "10"
+      APP_KAFKA__BROKERS: "kafka:9092"
+    ports:
+      - "50055:50055"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+      args:
+        SERVICE: payment-service
+    container_name: simple_trade_payment
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/simple_trade
+      APP_PAYMENT_SERVICE__HOST: 0.0.0.0
+      APP_PAYMENT_SERVICE__PORT: "50056"
+      APP_DATABASE__MAX_CONNECTIONS: "10"
+      APP_KAFKA__BROKERS: "kafka:9092"
+    ports:
+      - "50056:50056"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+      args:
+        SERVICE: api-gateway
+    container_name: simple_trade_gateway
+    environment:
+      APP_GATEWAY__HOST: 0.0.0.0
+      APP_GATEWAY__PORT: "8080"
+      APP_AUTH_SERVICE__HOST: auth-service
+      APP_AUTH_SERVICE__PORT: "50051"
+      APP_PRODUCT_SERVICE__HOST: product-service
+      APP_PRODUCT_SERVICE__PORT: "50052"
+      APP_ORDER_SERVICE__HOST: order-service
+      APP_ORDER_SERVICE__PORT: "50053"
+      APP_INVENTORY_SERVICE__HOST: inventory-service
+      APP_INVENTORY_SERVICE__PORT: "50054"
+      APP_PAYMENT_SERVICE__HOST: payment-service
+      APP_PAYMENT_SERVICE__PORT: "50056"
+      APP_REDIS__URL: redis://redis:6379
+      APP_KAFKA__BROKERS: "kafka:9092"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth-service
+      - product-service
+      - order-service
+      - inventory-service
+      - payment-service
+      - redis
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  simple_trade_network:
+    driver: bridge

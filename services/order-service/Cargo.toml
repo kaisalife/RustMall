@@ -1,0 +1,25 @@
+[package]
+name = "order-service"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+tokio.workspace = true
+tonic.workspace = true
+sqlx.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+figment.workspace = true
+async-trait.workspace = true
+
+common = { path = "../../crates/common" }
+proto = { path = "../../crates/proto" }
+event-bus = { path = "../../crates/event-bus" }
+
+[[bin]]
+name = "order-service"
+path = "src/main.rs"

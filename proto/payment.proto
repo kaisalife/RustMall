@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package payment;
+
+// 支付服务 - 独立微服务，通过 gRPC 对外提供服务
+// 其他服务通过 adapter 模式调用，完全解耦
+service PaymentService {
+    // 创建支付订单（含幂等控制）
+    rpc CreatePayment(CreatePaymentRequest) returns (PaymentResponse);
+
+    // 查询支付状态
+    rpc GetPayment(GetPaymentRequest) returns (PaymentResponse);
+
+    // 发起退款
+    rpc Refund(RefundRequest) returns (RefundResponse);
+
+    // 查询退款状态
+    rpc GetRefund(GetRefundRequest) returns (RefundResponse);
+
+    // 处理渠道异步回调（验签 + 状态机流转）
+    rpc HandleCallback(CallbackRequest) returns (CallbackResponse);
+}
+
+// ===== 金额类型 =====
+// proto 中用字符串传递 Decimal，避免 f64 精度丢失
+// 参考 Nautilus Trader 定点小数设计
+message Money {
+    string amount = 1;    // Decimal 字符串，如 "99.99"
+    string currency = 2;  // ISO 4217 货币代码，如 "CNY"
+}
+
+// ===== 支付渠道 =====
+enum PaymentChannel {
+    UNKNOWN_CHANNEL = 0;
+    WECHAT = 1;    // 微信支付
+    ALIPAY = 2;    // 支付宝
+    BANK_CARD = 3; // 银行卡
+    STUB = 99;     // 测试桩（开发环境）
+}
+
+// ===== 支付状态机 =====
+enum PaymentStatus {
+    UNKNOWN_STATUS = 0;
+    PENDING = 1;       // 待支付
+    PROCESSING = 2;    // 处理中
+    SUCCESS = 3;       // 支付成功
+    FAILED = 4;        // 支付失败
+    REFUNDING = 5;     // 退款中
+    REFUNDED = 6;      // 已退款
+    PARTIAL_REFUNDED = 7; // 部分退款
+    CLOSED = 8;        // 已关闭
+}
+
+// ===== 请求消息 =====
+
+message CreatePaymentRequest {
+    string idempotency_key = 1;  // 幂等 key（全局唯一，防重复扣款）
+    uint64 user_id = 2;          // 用户 ID
+    uint64 order_id = 3;         // 关联业务订单 ID
+    Money amount = 4;            // 支付金额
+    PaymentChannel channel = 5;  // 支付渠道
+    string description = 6;      // 支付描述
+    string client_ip = 7;        // 客户端 IP（风控用）
+    string device_id = 8;        // 设备指纹（风控用）
+}
+
+message GetPaymentRequest {
+    uint64 payment_id = 1;       // 支付订单 ID
+}
+
+message RefundRequest {
+    string idempotency_key = 1;  // 幂等 key
+    uint64 payment_id = 2;       // 原支付订单 ID
+    Money refund_amount = 3;     // 退款金额（部分退款时小于原金额）
+    string reason = 4;           // 退款原因
+}
+
+message GetRefundRequest {
+    uint64 refund_id = 1;        // 退款单 ID
+}
+
+message CallbackRequest {
+    PaymentChannel channel = 1;  // 回调来源渠道
+    string raw_data = 2;         // 回调原始数据（JSON/XML）
+    string signature = 3;        // 签名（验签用）
+    string timestamp = 4;        // 回调时间戳
+}
+
+// ===== 响应消息 =====
+
+message PaymentResponse {
+    uint64 payment_id = 1;            // 支付订单 ID
+    string idempotency_key = 2;       // 幂等 key
+    uint64 user_id = 3;
+    uint64 order_id = 4;
+    Money amount = 5;                 // 支付金额
+    Money fee = 6;                    // 手续费
+    PaymentChannel channel = 7;       // 支付渠道
+    PaymentStatus status = 8;         // 支付状态
+    string channel_txn_id = 9;        // 渠道交易号
+    string pay_url = 10;              // 支付链接（如微信扫码链接）
+    string created_at = 11;
+    string updated_at = 12;
+}
+
+message RefundResponse {
+    uint64 refund_id = 1;             // 退款单 ID
+    uint64 payment_id = 2;            // 原支付订单 ID
+    Money refund_amount = 3;          // 退款金额
+    PaymentStatus status = 4;         // 退款状态
+    string channel_txn_id = 5;        // 渠道退款交易号
+    string created_at = 6;
+    string updated_at = 7;
+}
+
+message CallbackResponse {
+    bool success = 1;                 // 回调处理是否成功
+    string message = 2;               // 处理结果描述
+    PaymentStatus new_status = 3;     // 更新后的支付状态
+}

@@ -1,0 +1,78 @@
+# Docker 环境配置（服务名代替 127.0.0.1）
+[gateway]
+host = "0.0.0.0"
+port = 8080
+cors_origins = ["*"]
+grpc_timeout_seconds = 10
+
+[auth_service]
+host = "0.0.0.0"
+port = 50051
+worker_id = 1
+
+[product_service]
+host = "0.0.0.0"
+port = 50052
+worker_id = 2
+
+[order_service]
+host = "0.0.0.0"
+port = 50053
+worker_id = 3
+
+[inventory_service]
+host = "0.0.0.0"
+port = 50054
+worker_id = 4
+
+[email_service]
+host = "0.0.0.0"
+port = 50055
+worker_id = 5
+
+[payment_service]
+host = "0.0.0.0"
+port = 50056
+worker_id = 6
+
+[database]
+host = "postgres"
+port = 5432
+username = "postgres"
+password = "postgres"
+database = "simple_trade"
+max_connections = 50
+min_connections = 5
+acquire_timeout_seconds = 10
+idle_timeout_minutes = 10
+max_lifetime_minutes = 30
+
+[redis]
+url = "redis://redis:6379"
+
+[jwt]
+secret = "your-super-secret-jwt-key-change-this-in-production-please"
+expiration_hours = 1
+refresh_expiration_hours = 168
+bcrypt_cost = 10
+
+[email]
+smtp_host = "smtp.gmail.com"
+smtp_port = 587
+smtp_username = "your-email@gmail.com"
+smtp_password = "your-app-password"
+from_address = "no-reply@simple-trade.com"
+
+[tracing]
+otlp_endpoint = "http://localhost:4317"
+
+[kafka]
+brokers = "kafka:9092"
+topic_prefix = "simple_trade"
+consumer_group = "simple_trade_group"
+
+# Rate Limit Configuration
+# 压测来源（宿主机经 Docker 端口转发）在容器内表现为 docker 网桥网关 IP，加入白名单放行
+[rate_limit]
+enabled = true
+whitelist_ips = ["172.21.0.1", "172.17.0.1", "127.0.0.1", "::1"]

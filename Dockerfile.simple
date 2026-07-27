@@ -1,0 +1,30 @@
+# 极简运行镜像（WSL2 编译的二进制运行）
+# 用 debian:trixie-slim 匹配 WSL2 Ubuntu 24.04 的 GLIBC 2.38
+FROM debian:trixie-slim
+
+ARG SERVICE
+ENV SERVICE_NAME=${SERVICE}
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# 复制配置文件，用 docker.toml 替换 base.toml
+COPY config/ ./config/
+RUN cp config/docker.toml config/base.toml
+
+# 复制 WSL2 编译好的二进制
+COPY target/release/${SERVICE} ./app
+
+RUN chmod +x ./app
+
+EXPOSE 8080 50051 50052 50053 50054 50055 50056
+
+# 使用 docker.toml 配置文件
+ENV APP_CONFIG_FILE=/app/config/docker.toml
+
+CMD ["./app"]

@@ -1,0 +1,22 @@
+[package]
+name = "db-migration"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+tokio.workspace = true
+sqlx.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+figment.workspace = true
+
+common = { path = "../common" }
+
+[[bin]]
+name = "migrate"
+path = "src/main.rs"
+
+[lib]
+path = "src/lib.rs"

@@ -1,0 +1,37 @@
+# Docker 构建上下文排除文件
+# 减少 Docker 构建上下文大小，加快构建速度
+
+# Git
+.git
+.gitignore
+
+# 文档
+.trae/
+*.md
+docs/
+
+# IDE
+.vscode/
+.idea/
+
+# 构建产物（排除 target，但保留 release 二进制用于 Dockerfile.simple）
+target/
+!target/release/
+!target/release/auth-service
+!target/release/product-service
+!target/release/order-service
+!target/release/inventory-service
+!target/release/email-service
+!target/release/payment-service
+!target/release/api-gateway
+
+# 环境配置
+.env
+.env.*
+
+# 脚本
+scripts/
+githooks/
+
+# CI/CD
+.github/

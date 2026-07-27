@@ -1,0 +1,127 @@
+//! 支付服务（payment-service）启动入口。
+//!
+//! 启动流程：
+//! 1. 加载配置（figment，读取 config/base.toml + 环境变量）
+//! 2. 初始化 tracing 日志（含 OpenTelemetry 分布式追踪）
+//! 3. 创建 PostgreSQL 连接池
+//! 4. 依赖注入：构建数据库封装、仓储、ID 生成器、渠道适配器、
+//!    应用服务（内部自建幂等服务与渠道路由）、gRPC 服务实现
+//! 5. 启动 Tonic gRPC server，监听 0.0.0.0:50056
+//! 6. 等待优雅关闭信号（Ctrl+C / SIGTERM）
+//!
+//! 注意：当前 `AppConfig` 尚未包含 `payment_service` 配置段，
+//! 服务地址与 worker_id 暂以常量硬编码，后续应补齐配置项。
+
+mod domain;
+mod application;
+mod infrastructure;
+mod interface;
+
+use std::sync::Arc;
+
+use common::{create_pool, init_tracing, load_config, SnowflakeIdGenerator};
+use infrastructure::{
+    PaymentChannelAdapter, PaymentDatabase, PgPaymentRepository, PgRefundRepository,
+    PgTransactionRepository, StubChannelAdapter,
+};
+use interface::PaymentServiceImpl;
+use proto::payment::payment_service_server::PaymentServiceServer;
+use tonic::transport::Server;
+
+use application::PaymentApplicationService;
+
+/// gRPC 监听地址。后续应迁移至配置项 `[payment_service]`。
+const PAYMENT_SERVICE_ADDR: &str = "0.0.0.0:50056";
+/// 雪花算法 worker_id（其他服务占用 1~5，支付服务使用 6）。
+const PAYMENT_WORKER_ID: u64 = 6;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 1. 加载配置（数据库、tracing 等）
+    let config = load_config()?;
+
+    // 2. 初始化日志（含 OpenTelemetry 分布式追踪）
+    init_tracing(
+        "payment-service",
+        config.tracing.otlp_endpoint.as_deref(),
+        "payment_service=debug,tonic=info",
+    );
+
+    let addr = PAYMENT_SERVICE_ADDR.parse()?;
+
+    tracing::info!("Payment Service starting on {}", addr);
+
+    // 3. 创建数据库连接池，并包装为 PaymentDatabase
+    let pool = create_pool(&config.database).await?;
+    let db = PaymentDatabase::new(pool);
+
+    // 4. 依赖注入
+    // 4.1 仓储实现（共享同一连接池）
+    let payment_repository = Arc::new(PgPaymentRepository::new(db.pool().clone()));
+    let transaction_repository = Arc::new(PgTransactionRepository::new(db.pool().clone()));
+    let refund_repository = Arc::new(PgRefundRepository::new(db.pool().clone()));
+
+    // 4.2 雪花 ID 生成器（用于支付订单、流水、退款单主键）
+    let id_generator = Arc::new(
+        SnowflakeIdGenerator::new(PAYMENT_WORKER_ID)
+            .expect("Failed to create ID generator"),
+    );
+
+    // 4.3 渠道适配器：开发环境使用测试桩，生产环境替换为真实适配器
+    //     （WeChatPayAdapter / AlipayAdapter），由应用服务内部的路由器按渠道路由。
+    let channel_adapter: Arc<dyn PaymentChannelAdapter> = Arc::new(StubChannelAdapter::new());
+
+    // 4.4 应用服务：编排仓储、幂等、路由、渠道、ID 生成
+    //     幂等服务（IdempotencyService）与渠道路由（PaymentRouter）在应用服务内部构造，
+    //     构造签名为 (payment_repo, txn_repo, refund_repo, channel_adapter, id_generator)。
+    let payment_service = Arc::new(PaymentApplicationService::new(
+        payment_repository,
+        transaction_repository,
+        refund_repository,
+        channel_adapter,
+        id_generator,
+    ));
+
+    // 4.5 gRPC 服务实现
+    let payment_service_impl = PaymentServiceImpl::new(payment_service);
+
+    tracing::info!("Payment Service started successfully");
+
+    // 5. 启动 gRPC server，注册优雅关闭
+    Server::builder()
+        .add_service(PaymentServiceServer::new(payment_service_impl))
+        .serve_with_shutdown(addr, shutdown_signal())
+        .await?;
+
+    Ok(())
+}
+
+/// 优雅关闭信号处理。
+///
+/// 监听 Ctrl+C（所有平台）与 SIGTERM（Unix），
+/// 收到信号后通知 gRPC server 进入关闭流程，完成在途请求后退出。
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    tracing::info!("signal received, starting graceful shutdown");
+}

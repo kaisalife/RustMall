@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package product;
+
+service ProductService {
+    rpc CreateProduct(CreateProductRequest) returns (ProductResponse);
+    rpc GetProduct(GetProductRequest) returns (ProductResponse);
+    rpc UpdateProduct(UpdateProductRequest) returns (ProductResponse);
+    rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+    rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+}
+
+message CreateProductRequest {
+    string name = 1;
+    string description = 2;
+    double price = 3;
+    uint64 category_id = 4;
+    int32 stock = 5;
+}
+
+message GetProductRequest {
+    uint64 product_id = 1;
+}
+
+message UpdateProductRequest {
+    uint64 product_id = 1;
+    optional string name = 2;
+    optional string description = 3;
+    optional double price = 4;
+    optional uint64 category_id = 5;
+}
+
+message DeleteProductRequest {
+    uint64 product_id = 1;
+}
+
+message DeleteProductResponse {
+    bool success = 1;
+}
+
+message ProductResponse {
+    uint64 product_id = 1;
+    string name = 2;
+    string description = 3;
+    double price = 4;
+    uint64 category_id = 5;
+    string created_at = 6;
+    string updated_at = 7;
+}
+
+message ListProductsRequest {
+    optional uint64 category_id = 1;
+    optional double min_price = 2;
+    optional double max_price = 3;
+    int32 page = 4;
+    int32 page_size = 5;
+}
+
+message ListProductsResponse {
+    repeated ProductResponse products = 1;
+    int32 total = 2;
+    int32 page = 3;
+    int32 page_size = 4;
+}

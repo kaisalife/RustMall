@@ -1,0 +1,49 @@
+# Rust
+target/
+# Cargo.lock: 二进制项目应提交 lock 文件，注释掉以纳入版本控制
+# Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+.trae/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite
+
+# Build artifacts
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Generated reports
+reports/
+
+# Backup / temp files
+*.bak
+*.tmp
+*.pid
+
+# Coverage / profiling
+coverage/
+*.profraw
+*.profdata
+
+# Docker data volumes
+docker-data/

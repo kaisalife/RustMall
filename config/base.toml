@@ -1,0 +1,89 @@
+# API Gateway Configuration
+[gateway]
+host = "127.0.0.1"
+port = 8080
+cors_origins = ["http://localhost:3000", "http://localhost:8080", "http://127.0.0.1:3000"]
+grpc_timeout_seconds = 10
+
+# Auth Service Configuration
+[auth_service]
+host = "127.0.0.1"
+port = 50051
+worker_id = 1
+
+# Product Service Configuration
+[product_service]
+host = "127.0.0.1"
+port = 50052
+worker_id = 2
+
+# Order Service Configuration
+[order_service]
+host = "127.0.0.1"
+port = 50053
+worker_id = 3
+
+# Inventory Service Configuration
+[inventory_service]
+host = "127.0.0.1"
+port = 50054
+worker_id = 4
+
+# Email Service Configuration
+[email_service]
+host = "127.0.0.1"
+port = 50055
+worker_id = 5
+
+# Database Configuration
+[database]
+host = "127.0.0.1"
+port = 5432
+username = "postgres"
+password = "postgres"  # 生产环境必须通过环境变量 APP_DATABASE__PASSWORD 覆盖
+database = "simple_trade"
+max_connections = 50
+min_connections = 5
+acquire_timeout_seconds = 10
+idle_timeout_minutes = 10
+max_lifetime_minutes = 30
+
+# Redis Configuration
+[redis]
+url = "redis://localhost:6379"
+
+# JWT Configuration
+[jwt]
+secret = "your-super-secret-jwt-key-change-this-in-production-please"  # 生产环境必须通过环境变量 APP_JWT__SECRET 覆盖
+expiration_hours = 1
+refresh_expiration_hours = 168
+bcrypt_cost = 12
+
+# Email Configuration
+[email]
+smtp_host = "smtp.gmail.com"
+smtp_port = 587
+smtp_username = "your-email@gmail.com"
+smtp_password = "your-app-password"  # 生产环境必须通过环境变量 APP_EMAIL__SMTP_PASSWORD 覆盖
+from_address = "no-reply@simple-trade.com"
+
+# Tracing Configuration
+[tracing]
+otlp_endpoint = "http://localhost:4317"
+
+# Payment Service Configuration
+[payment_service]
+host = "127.0.0.1"
+port = 50056
+worker_id = 6
+
+# Kafka Configuration
+[kafka]
+brokers = "localhost:9092"
+topic_prefix = "simple_trade"
+consumer_group = "simple_trade_group"
+
+# Rate Limit Configuration
+[rate_limit]
+enabled = true
+whitelist_ips = ["127.0.0.1", "::1"]

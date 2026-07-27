@@ -1,0 +1,35 @@
+[package]
+name = "tower-middleware"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+tokio.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+http = "1.0"
+http-body = "1.0"
+bytes.workspace = true
+futures-util.workspace = true
+pin-project = "1"
+tracing.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+jsonwebtoken.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+common = { path = "../common" }
+idempotency = { path = "../idempotency" }
+axum.workspace = true
+lru.workspace = true
+uuid.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dev-dependencies]
+axum.workspace = true
+tower.workspace = true
+http-body-util = "0.1"
+tokio.workspace = true
+common = { path = "../common" }

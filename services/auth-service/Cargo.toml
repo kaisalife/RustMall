@@ -1,0 +1,28 @@
+[package]
+name = "auth-service"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+tokio.workspace = true
+tonic.workspace = true
+sqlx.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+figment.workspace = true
+bcrypt.workspace = true
+jsonwebtoken.workspace = true
+validator.workspace = true
+async-trait.workspace = true
+
+common = { path = "../../crates/common" }
+proto = { path = "../../crates/proto" }
+db-migration = { path = "../../crates/db-migration" }
+
+[[bin]]
+name = "auth-service"
+path = "src/main.rs"

@@ -1,0 +1,22 @@
+[package]
+name = "event-bus"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+thiserror.workspace = true
+
+# rdkafka：librdkafka 的 Rust 绑定，内置连接池 + 自动重连
+# features:
+#   - cmake-build: 从源码编译 librdkafka（Docker 中需要 cmake）
+#   - tokio: 异步 runtime 支持
+rdkafka = { version = "0.36", features = ["cmake-build"] }
+tokio-stream = "0.1"
+
+common = { path = "../common" }

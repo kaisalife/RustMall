@@ -1,0 +1,182 @@
+# PR 检查流水线 - 提交 PR 时触发
+# 包含：代码质量检查 + 测试 + 测试覆盖率门禁 + 测试用例变更检查
+name: PR Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  # ============================================================
+  # Job 1: 代码质量（格式 + Clippy）
+  # ============================================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  # ============================================================
+  # Job 2: 测试（单元测试 + 集成测试）
+  # ============================================================
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev
+      - name: Run tests
+        run: cargo test --workspace --verbose
+
+  # ============================================================
+  # Job 3: 测试覆盖率门禁（新增 .rs 文件必须有测试）
+  # ============================================================
+  test-coverage-check:
+    name: Test Coverage Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史，用于 diff 比较
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev
+
+      - name: Cache cargo registry
+        uses: Swatinem/rust-cache@v2
+
+      # 检查新增/修改的 .rs 文件是否包含测试
+      - name: Check test coverage for new code
+        run: |
+          echo "=== 检查新增代码的测试覆盖 ==="
+          
+          # 获取 PR 中新增/修改的 .rs 文件（排除 tests/ 目录和 build.rs）
+          CHANGED_FILES=$(git diff --name-only --diff-filter=AM origin/${{ github.base_ref }}...HEAD | grep -E '\.rs$' | grep -v 'tests/' | grep -v 'build.rs' | grep -v 'mod.rs' || true)
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "没有新增/修改的 Rust 源文件，跳过检查。"
+            exit 0
+          fi
+          
+          echo "新增/修改的源文件："
+          echo "$CHANGED_FILES"
+          echo ""
+          
+          MISSING_TESTS=0
+          
+          for FILE in $CHANGED_FILES; do
+            # 检查文件中是否包含 #[test] 或 #[tokio::test]
+            if grep -qE '#\[test\]|#\[tokio::test\]' "$FILE"; then
+              echo "[PASS] $FILE - 包含测试"
+            else
+              # 检查是否有对应的集成测试文件
+              # 例如 src/domain/user.rs -> tests/ 目录下是否有相关测试
+              FILENAME=$(basename "$FILE" .rs)
+              if find . -path "*/tests/*.rs" -exec grep -l "$FILENAME" {} \; 2>/dev/null | grep -q .; then
+                echo "[PASS] $FILE - 在 tests/ 目录有对应集成测试"
+              else
+                echo "[FAIL] $FILE - 未找到测试用例！"
+                echo "  请在文件末尾添加 #[cfg(test)] mod tests { ... }"
+                echo "  或在 tests/ 目录下创建集成测试"
+                MISSING_TESTS=$((MISSING_TESTS + 1))
+              fi
+            fi
+          done
+          
+          echo ""
+          if [ $MISSING_TESTS -gt 0 ]; then
+            echo "=== 检查失败 ==="
+            echo "$MISSING_TESTS 个文件缺少测试用例"
+            echo ""
+            echo "如何添加测试："
+            echo "  1. 白盒测试：在源文件末尾添加 #[cfg(test)] mod tests { ... }"
+            echo "  2. 黑盒测试：在 tests/ 目录下创建集成测试文件"
+            exit 1
+          else
+            echo "=== 所有新增代码都有测试覆盖 ==="
+          fi
+
+  # ============================================================
+  # Job 4: 测试数量统计（不能减少测试数量）
+  # ============================================================
+  test-count-check:
+    name: Test Count Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev
+
+      - name: Cache cargo registry
+        uses: Swatinem/rust-cache@v2
+
+      # 统计 PR 分支的测试数量
+      - name: Count tests in PR branch
+        id: pr_count
+        run: |
+          TEST_COUNT=$(cargo test --workspace --no-run 2>&1 | grep -c "test " || echo "0")
+          echo "PR branch test count: $TEST_COUNT"
+          echo "count=$TEST_COUNT" >> $GITHUB_OUTPUT
+
+      # 切换到 base 分支统计测试数量
+      - name: Count tests in base branch
+        id: base_count
+        run: |
+          git checkout ${{ github.base_ref }}
+          TEST_COUNT=$(cargo test --workspace --no-run 2>&1 | grep -c "test " || echo "0")
+          echo "Base branch test count: $TEST_COUNT"
+          echo "count=$TEST_COUNT" >> $GITHUB_OUTPUT
+
+      # 比较测试数量
+      - name: Compare test counts
+        run: |
+          PR_COUNT=${{ steps.pr_count.outputs.count }}
+          BASE_COUNT=${{ steps.base_count.outputs.count }}
+          echo "Base branch: $BASE_COUNT tests"
+          echo "PR branch: $PR_COUNT tests"
+          if [ "$PR_COUNT" -lt "$BASE_COUNT" ]; then
+            echo "ERROR: PR 减少了测试数量 ($BASE_COUNT -> $PR_COUNT)！"
+            echo "请确保不删除现有测试，或用等价测试替换。"
+            exit 1
+          else
+            echo "OK: 测试数量未减少"
+          fi
+
+  # ============================================================
+  # Job 5: 编译验证
+  # ============================================================
+  compile-check:
+    name: Compile Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev
+      - name: Check compilation
+        run: cargo check --workspace

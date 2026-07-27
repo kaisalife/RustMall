@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package email;
+
+service EmailService {
+    rpc SendVerificationEmail(SendVerificationEmailRequest) returns (SendEmailResponse);
+    rpc SendOrderNotification(SendOrderNotificationRequest) returns (SendEmailResponse);
+    rpc SendPasswordResetEmail(SendPasswordResetEmailRequest) returns (SendEmailResponse);
+    rpc SendCustomEmail(SendCustomEmailRequest) returns (SendEmailResponse);
+}
+
+message SendVerificationEmailRequest {
+    string to_email = 1;
+    string username = 2;
+    string verification_code = 3;
+}
+
+message SendOrderNotificationRequest {
+    string to_email = 1;
+    string username = 2;
+    uint64 order_id = 3;
+    double total_amount = 4;
+    string status = 5;
+}
+
+message SendPasswordResetEmailRequest {
+    string to_email = 1;
+    string username = 2;
+    string reset_token = 3;
+}
+
+message SendCustomEmailRequest {
+    string to_email = 1;
+    string subject = 2;
+    string html_content = 3;
+    optional string username = 4;
+}
+
+message SendEmailResponse {
+    bool success = 1;
+    string message_id = 2;
+}

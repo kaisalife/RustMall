@@ -1,0 +1,56 @@
+#!/bin/bash
+# commit-msg hook: 检查 commit message 格式
+# 规范：<type>(<scope>): <description>
+# type: feat, fix, docs, style, refactor, test, chore, perf, ci
+
+set -e
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# 跳过 merge commit 和 revert
+if echo "$COMMIT_MSG" | grep -qE '^(Merge|Revert)'; then
+    exit 0
+fi
+
+# 跳过 fixup/autosquash commit
+if echo "$COMMIT_MSG" | grep -qE '^(fixup|squash|amend)'; then
+    exit 0
+fi
+
+# 约定式提交格式检查
+PATTERN='^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .{1,100}'
+
+FIRST_LINE=$(echo "$COMMIT_MSG" | head -1)
+
+if ! echo "$FIRST_LINE" | grep -qE "$PATTERN"; then
+    echo "=========================================="
+    echo "  Commit Message Format Check Failed!     "
+    echo "=========================================="
+    echo ""
+    echo "Expected format: <type>(<scope>): <description>"
+    echo ""
+    echo "Valid types:"
+    echo "  feat     新功能"
+    echo "  fix      修复 bug"
+    echo "  docs     文档变更"
+    echo "  style    代码格式（不影响功能）"
+    echo "  refactor 重构（非新增功能也非修复 bug）"
+    echo "  test     新增/修改测试"
+    echo "  chore    构建/工具变更"
+    echo "  perf     性能优化"
+    echo "  ci       CI/CD 变更"
+    echo "  build    构建系统变更"
+    echo "  revert   回滚提交"
+    echo ""
+    echo "Examples:"
+    echo "  feat(auth): add JWT refresh token support"
+    echo "  fix(order): resolve saga compensation deadlock"
+    echo "  docs(api): update gateway API documentation"
+    echo ""
+    echo "Your message: $FIRST_LINE"
+    echo ""
+    exit 1
+fi
+
+exit 0
