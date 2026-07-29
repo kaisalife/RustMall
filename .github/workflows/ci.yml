@@ -1,13 +1,13 @@
-# CI 工作流 - 手动触发（不在 push 时触发，本地用 git hooks 替代）
+# CI 工作流
 # 流程：代码格式检查 -> Clippy 静态分析 -> 单元测试 -> 安全审计 -> Release 编译
 name: CI
 
 on:
   push:
     branches: [main]
-  workflow_dispatch: # 仅手动触发（GitHub Actions 界面点击 Run workflow）
+  workflow_dispatch:
   schedule:
-    - cron: "0 2 * * *" # 每天凌晨 2 点定时执行（夜间全量检查）
+    - cron: "0 2 * * *"
 
 env:
   CARGO_TERM_COLOR: always
@@ -24,12 +24,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: "v2-rustmall"
-      - name: Install protobuf compiler
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libprotobuf-dev libssl-dev pkg-config libpq-dev
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Run clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings 2>&1 || { echo "::error::Clippy failed, see log above"; exit 1; }
 
   test:
     name: Test
@@ -40,10 +42,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: "v2-rustmall"
-      - name: Install protobuf compiler
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libprotobuf-dev libssl-dev pkg-config libpq-dev
       - name: Run tests
-        run: cargo test --workspace --verbose
+        run: cargo test --workspace --verbose 2>&1 || { echo "::error::Tests failed, see log above"; exit 1; }
 
   security:
     name: Security audit
@@ -66,7 +70,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: "v2-rustmall"
-      - name: Install protobuf compiler
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libprotobuf-dev libssl-dev pkg-config libpq-dev
       - name: Build release
         run: cargo build --release --workspace
