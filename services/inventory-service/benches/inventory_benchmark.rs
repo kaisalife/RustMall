@@ -1,44 +1,17 @@
 //! 库存操作基准测试
 //!
-//! 测试库存领域模型的扣减、预留、释放性能。
-//! 纯内存操作，不涉及数据库 IO。
+//! 测试库存领域模型的内存操作性能。
+//! 预扣减/扣减/释放已改为原子 SQL，不再在域模型中测试。
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use inventory_service::domain::inventory::Inventory;
 
-fn bench_deduct_stock(c: &mut Criterion) {
-    c.bench_function("deduct_stock_success", |b| {
+fn bench_add_stock(c: &mut Criterion) {
+    c.bench_function("add_stock", |b| {
         b.iter_batched(
             || Inventory::new(1, 1000000),
             |mut inv| {
-                let _: () = inv.deduct_stock(100).unwrap();
-                black_box(());
-            },
-            criterion::BatchSize::SmallInput,
-        )
-    });
-
-    c.bench_function("deduct_stock_insufficient", |b| {
-        b.iter_batched(
-            || Inventory::new(1, 50),
-            |mut inv| {
-                black_box(inv.deduct_stock(100).is_err());
-            },
-            criterion::BatchSize::SmallInput,
-        )
-    });
-}
-
-fn bench_reserve_release(c: &mut Criterion) {
-    c.bench_function("reserve_and_release", |b| {
-        b.iter_batched(
-            || {
-                let mut inv = Inventory::new(1, 1000000);
-                inv.reserve_stock(500).unwrap();
-                inv
-            },
-            |mut inv| {
-                let _: () = inv.release_reserved(500).unwrap();
+                inv.add_stock(100).unwrap();
                 black_box(());
             },
             criterion::BatchSize::SmallInput,
@@ -46,5 +19,17 @@ fn bench_reserve_release(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_deduct_stock, bench_reserve_release);
+fn bench_available_quantity(c: &mut Criterion) {
+    c.bench_function("available_quantity", |b| {
+        b.iter_batched(
+            || Inventory::new(1, 1000000),
+            |inv| {
+                black_box(inv.available_quantity());
+            },
+            criterion::BatchSize::SmallInput,
+        )
+    });
+}
+
+criterion_group!(benches, bench_add_stock, bench_available_quantity);
 criterion_main!(benches);

@@ -44,7 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 创建gRPC服务
     let inventory_service_impl = InventoryServiceImpl::new(inventory_service.clone());
 
-    // 启动 Kafka 事件消费者（消费 OrderCreated 事件，异步扣减库存）
+    // 启动 Kafka 事件消费者（消费 OrderCreated 事件，将预扣减转为实际扣减）
     let order_created_topic = format!("{}.order_created", config.kafka.topic_prefix);
     match event_bus::EventBusConsumer::new(&config.kafka.brokers, "inventory-service") {
         Ok(consumer) => {

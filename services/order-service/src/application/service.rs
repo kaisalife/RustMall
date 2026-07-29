@@ -4,11 +4,15 @@ use std::sync::Arc;
 
 use super::dto::{OrderDto, OrderItemDto};
 
+use proto::inventory::v1::{inventory_service_client::InventoryServiceClient, StockItem};
+use tonic::transport::Channel;
+
 #[derive(Clone)]
 pub struct OrderApplicationService {
     order_repository: Arc<dyn OrderRepository>,
     id_generator: Arc<SnowflakeIdGenerator>,
     event_producer: Option<event_bus::EventBusProducer>,
+    inventory_client: Option<InventoryServiceClient<Channel>>,
 }
 
 impl OrderApplicationService {
@@ -20,11 +24,17 @@ impl OrderApplicationService {
             order_repository,
             id_generator,
             event_producer: None,
+            inventory_client: None,
         }
     }
 
     pub fn with_event_producer(mut self, producer: event_bus::EventBusProducer) -> Self {
         self.event_producer = Some(producer);
+        self
+    }
+
+    pub fn with_inventory_client(mut self, client: InventoryServiceClient<Channel>) -> Self {
+        self.inventory_client = Some(client);
         self
     }
 
@@ -37,6 +47,40 @@ impl OrderApplicationService {
             return Err(AppError::invalid_input("Order must have at least one item"));
         }
 
+        // 同步预扣减库存（防超卖）
+        if let Some(client) = &self.inventory_client {
+            let reserve_items: Vec<StockItem> = items
+                .iter()
+                .map(|i| StockItem {
+                    product_id: i.product_id,
+                    quantity: i.quantity,
+                })
+                .collect();
+
+            let response = client
+                .clone()
+                .batch_reserve_stock(proto::inventory::v1::BatchReserveStockRequest {
+                    items: reserve_items,
+                })
+                .await
+                .map_err(|e| AppError::internal(format!("Inventory service error: {}", e)))?;
+
+            let resp = response.into_inner();
+            if !resp.all_success {
+                // 预扣减失败（库存不足），application 层已自动回滚
+                let errors: Vec<_> = resp
+                    .results
+                    .iter()
+                    .filter(|r| !r.success)
+                    .map(|r| format!("product {}: {}", r.product_id, r.error))
+                    .collect();
+                return Err(AppError::invalid_input(format!(
+                    "Insufficient stock: {}",
+                    errors.join("; ")
+                )));
+            }
+        }
+
         let order_items: Vec<OrderItem> = items
             .into_iter()
             .map(|item| OrderItem {
@@ -47,11 +91,10 @@ impl OrderApplicationService {
             .collect();
 
         let order_id = self.id_generator.generate().map_err(AppError::internal)?;
-
         let order = Order::new(order_id, user_id, order_items);
         let saved_order = self.order_repository.create(order).await?;
 
-        // 发布 OrderCreated 事件（inventory-service 异步消费扣减库存）
+        // 发布 OrderCreated 事件（inventory-service 异步消费，将预扣减转为实际扣减）
         if let Some(ref producer) = self.event_producer {
             let event_items: Vec<event_bus::OrderItemEvent> = saved_order
                 .items
@@ -70,7 +113,7 @@ impl OrderApplicationService {
             };
             if let Err(e) = producer.publish(event).await {
                 tracing::error!("Failed to publish OrderCreated event: {}", e);
-                // 事件发送失败不阻塞订单创建（库存已预留，扣减可补偿）
+                // 事件发送失败不阻塞订单创建（库存已预扣减，可通过补偿机制回滚）
             }
         }
 
@@ -114,7 +157,29 @@ impl OrderApplicationService {
             "PAID" => order.mark_as_paid(),
             "SHIPPED" => order.mark_as_shipped(),
             "COMPLETED" => order.mark_as_completed(),
-            "CANCELLED" => order.cancel().map_err(AppError::invalid_input)?,
+            "CANCELLED" => {
+                // 释放预扣减库存
+                if let Some(client) = &self.inventory_client {
+                    let release_items: Vec<proto::inventory::v1::StockItem> = order
+                        .items
+                        .iter()
+                        .map(|i| proto::inventory::v1::StockItem {
+                            product_id: i.product_id,
+                            quantity: i.quantity,
+                        })
+                        .collect();
+                    if let Err(e) = client
+                        .clone()
+                        .batch_release_stock(proto::inventory::v1::BatchReleaseStockRequest {
+                            items: release_items,
+                        })
+                        .await
+                    {
+                        tracing::error!("Failed to release stock on cancel: {}", e);
+                    }
+                }
+                order.cancel().map_err(AppError::invalid_input)?
+            }
             _ => return Err(AppError::invalid_input("Invalid order status")),
         }
 

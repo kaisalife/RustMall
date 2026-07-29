@@ -176,32 +176,36 @@ impl InventoryService for InventoryServiceImpl {
             .iter()
             .map(|i| (i.product_id, i.quantity))
             .collect();
-        let results = self.service.batch_reserve_stock(items).await;
 
-        let mut all_success = true;
-        let results: Vec<_> = results
-            .into_iter()
-            .map(|(product_id, result)| match result {
-                Ok(_) => BatchReserveStockResult {
-                    product_id,
-                    success: true,
-                    error: String::new(),
-                },
-                Err(e) => {
-                    all_success = false;
-                    BatchReserveStockResult {
-                        product_id,
-                        success: false,
-                        error: e.to_string(),
-                    }
-                }
-            })
-            .collect();
-
-        Ok(Response::new(BatchReserveStockResponse {
-            all_success,
-            results,
-        }))
+        match self.service.batch_reserve_stock(items).await {
+            Ok(_) => Ok(Response::new(BatchReserveStockResponse {
+                all_success: true,
+                results: req
+                    .items
+                    .iter()
+                    .map(|i| BatchReserveStockResult {
+                        product_id: i.product_id,
+                        success: true,
+                        error: String::new(),
+                    })
+                    .collect(),
+            })),
+            Err(e) => {
+                let error_msg = e.to_string();
+                Ok(Response::new(BatchReserveStockResponse {
+                    all_success: false,
+                    results: req
+                        .items
+                        .iter()
+                        .map(|i| BatchReserveStockResult {
+                            product_id: i.product_id,
+                            success: false,
+                            error: error_msg.clone(),
+                        })
+                        .collect(),
+                }))
+            }
+        }
     }
 
     async fn batch_release_stock(
@@ -214,10 +218,10 @@ impl InventoryService for InventoryServiceImpl {
             .iter()
             .map(|i| (i.product_id, i.quantity))
             .collect();
-        let results = self.service.batch_release_stock(items).await;
+        self.service.batch_release_stock(items).await;
 
-        let all_success = results.iter().all(|(_, r)| r.is_ok());
-
-        Ok(Response::new(BatchReleaseStockResponse { all_success }))
+        Ok(Response::new(BatchReleaseStockResponse {
+            all_success: true,
+        }))
     }
 }

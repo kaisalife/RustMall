@@ -90,6 +90,71 @@ impl InventoryRepository for InventoryRepositoryImpl {
 
         Ok(records.into_iter().map(|r| r.into_domain()).collect())
     }
+
+    async fn atomic_reserve(&self, product_id: u64, quantity: i32) -> AppResult<Option<Inventory>> {
+        let record = sqlx::query_as::<_, InventoryRecord>(
+            r#"
+            UPDATE inventory
+            SET reserved_quantity = reserved_quantity + $1,
+                version = version + 1,
+                updated_at = NOW()
+            WHERE product_id = $2
+              AND quantity - reserved_quantity >= $1
+            RETURNING product_id, quantity, reserved_quantity, version, updated_at
+            "#,
+        )
+        .bind(quantity)
+        .bind(product_id as i64)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(record.map(|r| r.into_domain()))
+    }
+
+    async fn atomic_release(&self, product_id: u64, quantity: i32) -> AppResult<Option<Inventory>> {
+        let record = sqlx::query_as::<_, InventoryRecord>(
+            r#"
+            UPDATE inventory
+            SET reserved_quantity = reserved_quantity - $1,
+                version = version + 1,
+                updated_at = NOW()
+            WHERE product_id = $2
+              AND reserved_quantity >= $1
+            RETURNING product_id, quantity, reserved_quantity, version, updated_at
+            "#,
+        )
+        .bind(quantity)
+        .bind(product_id as i64)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(record.map(|r| r.into_domain()))
+    }
+
+    async fn atomic_deduct_reserved(
+        &self,
+        product_id: u64,
+        quantity: i32,
+    ) -> AppResult<Option<Inventory>> {
+        let record = sqlx::query_as::<_, InventoryRecord>(
+            r#"
+            UPDATE inventory
+            SET quantity = quantity - $1,
+                reserved_quantity = reserved_quantity - $1,
+                version = version + 1,
+                updated_at = NOW()
+            WHERE product_id = $2
+              AND reserved_quantity >= $1
+            RETURNING product_id, quantity, reserved_quantity, version, updated_at
+            "#,
+        )
+        .bind(quantity)
+        .bind(product_id as i64)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(record.map(|r| r.into_domain()))
+    }
 }
 
 #[derive(sqlx::FromRow)]

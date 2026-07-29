@@ -64,6 +64,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(producer) = event_producer {
         order_service = order_service.with_event_producer(producer);
     }
+
+    // 初始化 inventory-service gRPC 客户端（用于库存预扣减/释放）
+    let inventory_addr = format!("http://{}", config.inventory_service.advertise_address());
+    if let Ok(endpoint) = tonic::transport::Channel::from_shared(inventory_addr.clone()) {
+        match endpoint.connect().await {
+            Ok(channel) => {
+                let inventory_client =
+                    proto::inventory::v1::inventory_service_client::InventoryServiceClient::new(
+                        channel,
+                    );
+                order_service = order_service.with_inventory_client(inventory_client);
+                tracing::info!("Connected to inventory-service at {}", inventory_addr);
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to connect to inventory-service at {}: {}. Stock reservation disabled.",
+                    inventory_addr,
+                    e
+                );
+            }
+        }
+    } else {
+        tracing::warn!("Invalid inventory-service address: {}", inventory_addr);
+    }
+
     let order_service_impl = OrderServiceImpl::new(order_service);
 
     tracing::info!("Order Service started successfully");
