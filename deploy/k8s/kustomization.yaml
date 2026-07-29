@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: simple-trade
+resources:
+  # 基础设施
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  # 数据层
+  - postgres/statefulset.yaml
+  - postgres/service.yaml
+  - postgres/persistent-volume.yaml
+  - redis/deployment.yaml
+  - redis/service.yaml
+  - kafka/deployment.yaml
+  - kafka/service.yaml
+  - nacos/deployment.yaml
+  - nacos/service.yaml
+  # 应用层 — 微服务
+  - auth-service/deployment.yaml
+  - auth-service/service.yaml
+  - product-service/deployment.yaml
+  - product-service/service.yaml
+  - order-service/deployment.yaml
+  - order-service/service.yaml
+  - inventory-service/deployment.yaml
+  - inventory-service/service.yaml
+  - email-service/deployment.yaml
+  - email-service/service.yaml
+  - payment-service/deployment.yaml
+  - payment-service/service.yaml
+  # 应用层 — 网关
+  - api-gateway/deployment.yaml
+  - api-gateway/service.yaml
+  - api-gateway/ingress.yaml
+  # 弹性层
+  - hpa/api-gateway-hpa.yaml
+  - hpa/auth-service-hpa.yaml
+  - hpa/product-service-hpa.yaml

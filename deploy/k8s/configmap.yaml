@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: simple-trade
+  labels:
+    app.kubernetes.io/part-of: simple-trade
+data:
+  # ---- Nacos 服务发现 ----
+  APP_NACOS__SERVER_ADDR: "nacos:8848"
+  APP_NACOS__ENABLED: "true"
+  APP_NACOS__APP_NAME: "simple_trade"
+
+  # ---- Kafka 事件总线 ----
+  APP_KAFKA__BROKERS: "kafka:9092"
+  APP_KAFKA__TOPIC_PREFIX: "simple_trade"
+  APP_KAFKA__CONSUMER_GROUP: "simple_trade_group"
+
+  # ---- Redis 缓存 ----
+  APP_REDIS__URL: "redis://redis:6379"
+
+  # ---- 分布式追踪 (OTLP -> Tempo) ----
+  APP_TRACING__OTLP_ENDPOINT: "http://tempo:4317"
+
+  # ---- 数据库（非敏感部分）----
+  APP_DATABASE__HOST: "postgres"
+  APP_DATABASE__PORT: "5432"
+  APP_DATABASE__MIN_CONNECTIONS: "5"
+  APP_DATABASE__ACQUIRE_TIMEOUT_SECONDS: "10"
+  APP_DATABASE__IDLE_TIMEOUT_MINUTES: "10"
+  APP_DATABASE__MAX_LIFETIME_MINUTES: "30"
+
+  # ---- JWT（非 secret 部分）----
+  APP_JWT__EXPIRATION_HOURS: "1"
+  APP_JWT__REFRESH_EXPIRATION_HOURS: "168"
+  APP_JWT__BCRYPT_COST: "10"
+
+  # ---- 限流 ----
+  APP_RATE_LIMIT__ENABLED: "true"
+
+  # ---- 邮件（非敏感部分）----
+  APP_EMAIL__SMTP_HOST: "smtp.gmail.com"
+  APP_EMAIL__SMTP_PORT: "587"
+  APP_EMAIL__SMTP_USERNAME: "your-email@gmail.com"
+  APP_EMAIL__FROM_ADDRESS: "no-reply@simple-trade.com"
+
+  # ---- 各服务 worker_id（Snowflake ID 生成器）----
+  APP_AUTH_SERVICE__WORKER_ID: "1"
+  APP_PRODUCT_SERVICE__WORKER_ID: "2"
+  APP_ORDER_SERVICE__WORKER_ID: "3"
+  APP_INVENTORY_SERVICE__WORKER_ID: "4"
+  APP_EMAIL_SERVICE__WORKER_ID: "5"
+  APP_PAYMENT_SERVICE__WORKER_ID: "6"
