@@ -46,6 +46,18 @@ impl Default for NacosConfig {
     }
 }
 
+impl From<common::config::NacosConfigSection> for NacosConfig {
+    fn from(section: common::config::NacosConfigSection) -> Self {
+        Self {
+            server_addr: section.server_addr,
+            namespace: section.namespace,
+            username: section.username,
+            password: section.password,
+            app_name: section.app_name,
+        }
+    }
+}
+
 /// Nacos 服务注册表实现
 pub struct NacosRegistry {
     naming_service: Arc<nacos_sdk::api::naming::NamingService>,

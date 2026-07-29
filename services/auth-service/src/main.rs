@@ -10,6 +10,7 @@ use common::{init_tracing, load_config, SnowflakeIdGenerator};
 use infrastructure::{DatabaseConnection, UserRepositoryImpl};
 use interface::AuthServiceImpl;
 use proto::auth::auth_service_server::AuthServiceServer;
+use service_discovery::{NacosConfig, NacosRegistry, ServiceInstance, ServiceRegistry};
 use tonic::transport::Server;
 
 #[tokio::main]
@@ -84,6 +85,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("  Auth Service started successfully! 🚀");
     tracing::info!("  Listening on: {}", addr);
     tracing::info!("========================================");
+
+    // 在 gRPC server 启动前注册到 Nacos
+    if config.nacos.enabled {
+        let nacos_config = NacosConfig::from(config.nacos.clone());
+        match NacosRegistry::new(&nacos_config).await {
+            Ok(registry) => {
+                let instance = ServiceInstance::new(
+                    "auth-service",
+                    config.auth_service.advertise_ip(),
+                    config.auth_service.port,
+                );
+                if let Err(e) = registry.register(instance).await {
+                    tracing::warn!("Failed to register to Nacos: {}, service will start anyway", e);
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to connect to Nacos: {}, service will start anyway", e);
+            }
+        }
+    }
 
     // Start serving
     Server::builder()

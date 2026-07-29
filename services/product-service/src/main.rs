@@ -9,6 +9,7 @@ use common::{init_tracing, load_config, SnowflakeIdGenerator};
 use infrastructure::{CategoryRepositoryImpl, DatabaseConnection, ProductRepositoryImpl};
 use interface::ProductServiceImpl;
 use proto::product::product_service_server::ProductServiceServer;
+use service_discovery::{NacosConfig, NacosRegistry, ServiceInstance, ServiceRegistry};
 use tonic::transport::Server;
 
 #[tokio::main]
@@ -56,6 +57,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 启动服务
     tracing::info!("Product Service started successfully");
+
+    // 在 gRPC server 启动前注册到 Nacos
+    if config.nacos.enabled {
+        let nacos_config = NacosConfig::from(config.nacos.clone());
+        match NacosRegistry::new(&nacos_config).await {
+            Ok(registry) => {
+                let instance = ServiceInstance::new(
+                    "product-service",
+                    config.product_service.advertise_ip(),
+                    config.product_service.port,
+                );
+                if let Err(e) = registry.register(instance).await {
+                    tracing::warn!("Failed to register to Nacos: {}, service will start anyway", e);
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to connect to Nacos: {}, service will start anyway", e);
+            }
+        }
+    }
 
     Server::builder()
         .add_service(ProductServiceServer::new(product_service_impl))

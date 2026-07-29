@@ -7,6 +7,7 @@ use common::{init_tracing, load_config, SnowflakeIdGenerator};
 use infrastructure::{DatabaseConnection, OrderRepositoryImpl};
 use interface::OrderServiceImpl;
 use proto::order::order_service_server::OrderServiceServer;
+use service_discovery::{NacosConfig, NacosRegistry, ServiceInstance, ServiceRegistry};
 use std::sync::Arc;
 use tonic::transport::Server;
 
@@ -66,6 +67,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let order_service_impl = OrderServiceImpl::new(order_service);
 
     tracing::info!("Order Service started successfully");
+
+    // 在 gRPC server 启动前注册到 Nacos
+    if config.nacos.enabled {
+        let nacos_config = NacosConfig::from(config.nacos.clone());
+        match NacosRegistry::new(&nacos_config).await {
+            Ok(registry) => {
+                let instance = ServiceInstance::new(
+                    "order-service",
+                    config.order_service.advertise_ip(),
+                    config.order_service.port,
+                );
+                if let Err(e) = registry.register(instance).await {
+                    tracing::warn!("Failed to register to Nacos: {}, service will start anyway", e);
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to connect to Nacos: {}, service will start anyway", e);
+            }
+        }
+    }
 
     Server::builder()
         .add_service(OrderServiceServer::new(order_service_impl))

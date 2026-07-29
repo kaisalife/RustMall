@@ -13,6 +13,7 @@ use axum::{
 use std::sync::Arc;
 use tower::ServiceExt;
 
+use api_gateway::circuit_breaker::CircuitBreaker;
 use api_gateway::grpc_clients::GrpcClients;
 use api_gateway::routes::{
     auth_routes, health_check_handler, inventory_routes, order_routes, product_routes, user_routes,
@@ -43,6 +44,10 @@ fn make_test_state() -> Arc<AppState> {
         product: ProductServiceClient::new(channel.clone()),
         order: OrderServiceClient::new(channel.clone()),
         inventory: InventoryServiceClient::new(channel),
+        auth_cb: CircuitBreaker::default_cb(),
+        product_cb: CircuitBreaker::default_cb(),
+        order_cb: CircuitBreaker::default_cb(),
+        inventory_cb: CircuitBreaker::default_cb(),
     };
 
     let config = common::AppConfig {
@@ -56,31 +61,37 @@ fn make_test_state() -> Arc<AppState> {
             host: "127.0.0.1".to_string(),
             port: 50051,
             worker_id: 1,
+            advertise_host: None,
         },
         product_service: common::ServiceConfig {
             host: "127.0.0.1".to_string(),
             port: 50052,
             worker_id: 2,
+            advertise_host: None,
         },
         order_service: common::ServiceConfig {
             host: "127.0.0.1".to_string(),
             port: 50053,
             worker_id: 3,
+            advertise_host: None,
         },
         inventory_service: common::ServiceConfig {
             host: "127.0.0.1".to_string(),
             port: 50054,
             worker_id: 4,
+            advertise_host: None,
         },
         email_service: common::ServiceConfig {
             host: "127.0.0.1".to_string(),
             port: 50055,
             worker_id: 5,
+            advertise_host: None,
         },
         payment_service: common::PaymentServiceConfig {
             host: "127.0.0.1".to_string(),
             port: 50056,
             worker_id: 6,
+            advertise_host: None,
         },
         database: common::DatabaseConfig {
             host: "127.0.0.1".to_string(),
@@ -112,6 +123,7 @@ fn make_test_state() -> Arc<AppState> {
         },
         tracing: common::TracingConfig::default(),
         rate_limit: common::RateLimitConfig::default(),
+        nacos: common::config::NacosConfigSection::default(),
         kafka: common::KafkaConfig {
             brokers: "localhost:9092".to_string(),
             topic_prefix: "simple_trade".to_string(),

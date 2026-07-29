@@ -34,9 +34,11 @@ async fn get_inventory_handler(
         }
     }
 
-    let mut client = state.clients.inventory.clone();
     let request = proto::inventory::GetStockRequest { product_id };
-    let response = client.get_stock(request).await?;
+    let response = state
+        .clients
+        .call_inventory(|mut client| async move { client.get_stock(request).await })
+        .await?;
     let inner = response.into_inner();
 
     let dto = StockDto {
@@ -64,12 +66,14 @@ async fn deduct_inventory_handler(
     Path(product_id): Path<u64>,
     Json(req): Json<DeductStockRequest>,
 ) -> Result<Json<ApiResponse<DeductStockResponseDto>>, AppError> {
-    let mut client = state.clients.inventory.clone();
     let request = proto::inventory::DeductStockRequest {
         product_id,
         quantity: req.quantity,
     };
-    let response = client.deduct_stock(request).await?;
+    let response = state
+        .clients
+        .call_inventory(|mut client| async move { client.deduct_stock(request).await })
+        .await?;
     let inner = response.into_inner();
 
     // 扣减后失效缓存
@@ -94,12 +98,14 @@ async fn add_inventory_handler(
     Path(product_id): Path<u64>,
     Json(req): Json<AddStockRequest>,
 ) -> Result<Json<ApiResponse<AddStockResponseDto>>, AppError> {
-    let mut client = state.clients.inventory.clone();
     let request = proto::inventory::AddStockRequest {
         product_id,
         quantity: req.quantity,
     };
-    let response = client.add_stock(request).await?;
+    let response = state
+        .clients
+        .call_inventory(|mut client| async move { client.add_stock(request).await })
+        .await?;
     let inner = response.into_inner();
 
     // 添加后失效缓存

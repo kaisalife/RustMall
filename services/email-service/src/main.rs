@@ -8,6 +8,7 @@ mod interface;
 use common::{init_tracing, load_config, SnowflakeIdGenerator};
 use interface::EmailServiceImpl;
 use proto::email::email_service_server::EmailServiceServer;
+use service_discovery::{NacosConfig, NacosRegistry, ServiceInstance, ServiceRegistry};
 use std::sync::Arc;
 use tonic::transport::Server;
 
@@ -73,6 +74,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("  Email Service 启动成功 🚀");
     tracing::info!("  监听地址：{}", addr);
     tracing::info!("========================================");
+
+    // 在 gRPC server 启动前注册到 Nacos
+    if config.nacos.enabled {
+        let nacos_config = NacosConfig::from(config.nacos.clone());
+        match NacosRegistry::new(&nacos_config).await {
+            Ok(registry) => {
+                let instance = ServiceInstance::new(
+                    "email-service",
+                    config.email_service.advertise_ip(),
+                    config.email_service.port,
+                );
+                if let Err(e) = registry.register(instance).await {
+                    tracing::warn!("Failed to register to Nacos: {}, service will start anyway", e);
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to connect to Nacos: {}, service will start anyway", e);
+            }
+        }
+    }
 
     // 启动服务
     Server::builder()

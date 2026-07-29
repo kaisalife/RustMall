@@ -19,6 +19,7 @@ use api_gateway::routes::{
     ping_handler, product_routes, user_routes,
 };
 use api_gateway::state::AppState;
+use service_discovery::{NacosConfig, NacosRegistry};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -37,18 +38,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 初始化 gRPC 客户端
     let grpc_timeout = std::time::Duration::from_secs(config.gateway.grpc_timeout_seconds);
-    let clients = grpc_clients::GrpcClients::new(
-        config.auth_service.address(),
-        config.product_service.address(),
-        config.order_service.address(),
-        config.inventory_service.address(),
-        grpc_timeout,
-    )
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to connect to backend services: {}", e);
-        e
-    })?;
+    let static_addrs = grpc_clients::StaticAddrs {
+        auth: config.auth_service.address(),
+        product: config.product_service.address(),
+        order: config.order_service.address(),
+        inventory: config.inventory_service.address(),
+    };
+
+    let clients = if config.nacos.enabled {
+        tracing::info!("Nacos service discovery enabled, discovering backend services...");
+        let nacos_config = NacosConfig::from(config.nacos.clone());
+        match NacosRegistry::new(&nacos_config).await {
+            Ok(registry) => grpc_clients::GrpcClients::new_from_nacos(&registry, grpc_timeout)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to discover backend services via Nacos: {}", e);
+                    e
+                })?,
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to connect to Nacos: {}, falling back to static addresses",
+                    e
+                );
+                grpc_clients::GrpcClients::new_from_static(static_addrs, grpc_timeout)
+                    .await
+                    .map_err(|e| {
+                        tracing::error!("Failed to connect to backend services: {}", e);
+                        e
+                    })?
+            }
+        }
+    } else {
+        grpc_clients::GrpcClients::new_from_static(static_addrs, grpc_timeout)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to connect to backend services: {}", e);
+                e
+            })?
+    };
 
     tracing::info!("Connected to all backend services");
 

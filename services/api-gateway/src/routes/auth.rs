@@ -34,13 +34,15 @@ async fn register_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<RegisterRequest>,
 ) -> Result<Json<ApiResponse<UserDto>>, AppError> {
-    let mut client = state.clients.auth.clone();
     let request = proto::auth::RegisterRequest {
         email: req.email,
         password: req.password,
         nickname: req.nickname,
     };
-    let response = client.register(request).await?;
+    let response = state
+        .clients
+        .call_auth(|mut client| async move { client.register(request).await })
+        .await?;
     let inner = response.into_inner();
 
     Ok(Json(ApiResponse::success(UserDto {
@@ -65,12 +67,14 @@ async fn login_handler(
         }
     }
 
-    let mut client = state.clients.auth.clone();
     let request = proto::auth::LoginRequest {
         email: req.email,
         password: req.password,
     };
-    let response = client.login(request).await?;
+    let response = state
+        .clients
+        .call_auth(|mut client| async move { client.login(request).await })
+        .await?;
     let inner = response.into_inner();
 
     let dto = LoginResponseDto {
@@ -97,11 +101,13 @@ async fn refresh_token_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<RefreshTokenRequest>,
 ) -> Result<Json<ApiResponse<LoginResponseDto>>, AppError> {
-    let mut client = state.clients.auth.clone();
     let request = proto::auth::RefreshTokenRequest {
         refresh_token: req.refresh_token,
     };
-    let response = client.refresh_token(request).await?;
+    let response = state
+        .clients
+        .call_auth(|mut client| async move { client.refresh_token(request).await })
+        .await?;
     let inner = response.into_inner();
 
     Ok(Json(ApiResponse::success(LoginResponseDto {
@@ -116,9 +122,11 @@ async fn get_user_handler(
     State(state): State<Arc<AppState>>,
     Path(id): Path<u64>,
 ) -> Result<Json<ApiResponse<UserDto>>, AppError> {
-    let mut client = state.clients.auth.clone();
     let request = proto::auth::GetUserRequest { user_id: id };
-    let response = client.get_user(request).await?;
+    let response = state
+        .clients
+        .call_auth(|mut client| async move { client.get_user(request).await })
+        .await?;
     let inner = response.into_inner();
 
     Ok(Json(ApiResponse::success(UserDto {
@@ -133,13 +141,15 @@ async fn update_password_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<UpdatePasswordRequest>,
 ) -> Result<Json<ApiResponse<UpdatePasswordResponseDto>>, AppError> {
-    let mut client = state.clients.auth.clone();
     let request = proto::auth::UpdatePasswordRequest {
         user_id: req.user_id,
         old_password: req.old_password,
         new_password: req.new_password,
     };
-    let response = client.update_password(request).await?;
+    let response = state
+        .clients
+        .call_auth(|mut client| async move { client.update_password(request).await })
+        .await?;
     let inner = response.into_inner();
 
     Ok(Json(ApiResponse::success(UpdatePasswordResponseDto {

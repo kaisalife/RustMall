@@ -9,6 +9,7 @@ use common::{init_tracing, load_config};
 use infrastructure::{DatabaseConnection, InventoryRepositoryImpl};
 use interface::InventoryServiceImpl;
 use proto::inventory::inventory_service_server::InventoryServiceServer;
+use service_discovery::{NacosConfig, NacosRegistry, ServiceInstance, ServiceRegistry};
 use tonic::transport::Server;
 
 #[tokio::main]
@@ -106,6 +107,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 启动服务
     tracing::info!("Inventory Service started successfully");
+
+    // 在 gRPC server 启动前注册到 Nacos
+    if config.nacos.enabled {
+        let nacos_config = NacosConfig::from(config.nacos.clone());
+        match NacosRegistry::new(&nacos_config).await {
+            Ok(registry) => {
+                let instance = ServiceInstance::new(
+                    "inventory-service",
+                    config.inventory_service.advertise_ip(),
+                    config.inventory_service.port,
+                );
+                if let Err(e) = registry.register(instance).await {
+                    tracing::warn!("Failed to register to Nacos: {}, service will start anyway", e);
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to connect to Nacos: {}, service will start anyway", e);
+            }
+        }
+    }
 
     Server::builder()
         .add_service(InventoryServiceServer::new(inventory_service_impl))

@@ -19,6 +19,7 @@ async-trait.workspace = true
 common = { path = "../../crates/common" }
 proto = { path = "../../crates/proto" }
 event-bus = { path = "../../crates/event-bus" }
+service-discovery = { path = "../../crates/service-discovery" }
 
 [[bin]]
 name = "order-service"

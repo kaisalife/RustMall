@@ -28,7 +28,6 @@ async fn create_product_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateProductRequest>,
 ) -> Result<Json<ApiResponse<ProductDto>>, AppError> {
-    let mut client = state.clients.product.clone();
     let request = proto::product::CreateProductRequest {
         name: req.name,
         description: req.description,
@@ -36,7 +35,10 @@ async fn create_product_handler(
         category_id: req.category_id,
         stock: req.stock,
     };
-    let response = client.create_product(request).await?;
+    let response = state
+        .clients
+        .call_product(|mut client| async move { client.create_product(request).await })
+        .await?;
     let inner = response.into_inner();
 
     Ok(Json(ApiResponse::success(product_to_dto(inner))))
@@ -57,9 +59,13 @@ async fn get_product_handler(
     }
 
     // 未命中缓存，调用 gRPC
-    let mut client = state.clients.product.clone();
-    match client
-        .get_product(proto::product::GetProductRequest { product_id: id })
+    match state
+        .clients
+        .call_product(|mut client| async move {
+            client
+                .get_product(proto::product::GetProductRequest { product_id: id })
+                .await
+        })
         .await
     {
         Ok(resp) => {
@@ -106,7 +112,6 @@ async fn update_product_handler(
     Path(id): Path<u64>,
     Json(req): Json<UpdateProductRequest>,
 ) -> Result<Json<ApiResponse<ProductDto>>, AppError> {
-    let mut client = state.clients.product.clone();
     let request = proto::product::UpdateProductRequest {
         product_id: id,
         name: req.name,
@@ -114,7 +119,10 @@ async fn update_product_handler(
         price: req.price,
         category_id: req.category_id,
     };
-    let response = client.update_product(request).await?;
+    let response = state
+        .clients
+        .call_product(|mut client| async move { client.update_product(request).await })
+        .await?;
     let inner = response.into_inner();
 
     // 更新后失效缓存
@@ -131,9 +139,11 @@ async fn delete_product_handler(
     State(state): State<Arc<AppState>>,
     Path(id): Path<u64>,
 ) -> Result<Json<ApiResponse<DeleteProductResponseDto>>, AppError> {
-    let mut client = state.clients.product.clone();
     let request = proto::product::DeleteProductRequest { product_id: id };
-    let response = client.delete_product(request).await?;
+    let response = state
+        .clients
+        .call_product(|mut client| async move { client.delete_product(request).await })
+        .await?;
     let inner = response.into_inner();
 
     // 删除后失效缓存
@@ -152,7 +162,6 @@ async fn list_products_handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ListProductsQuery>,
 ) -> Result<Json<ApiResponse<ListProductsResponseDto>>, AppError> {
-    let mut client = state.clients.product.clone();
     let request = proto::product::ListProductsRequest {
         category_id: query.category_id,
         min_price: query.min_price,
@@ -160,7 +169,11 @@ async fn list_products_handler(
         page: query.page,
         page_size: query.page_size,
     };
-    match client.list_products(request).await {
+    match state
+        .clients
+        .call_product(|mut client| async move { client.list_products(request).await })
+        .await
+    {
         Ok(resp) => {
             let resp = resp.into_inner();
             let products: Vec<ProductDto> = resp.products.into_iter().map(product_to_dto).collect();

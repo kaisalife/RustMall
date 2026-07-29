@@ -27,8 +27,6 @@ async fn create_order_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateOrderRequest>,
 ) -> Result<Json<ApiResponse<OrderDto>>, AppError> {
-    let mut inventory_client = state.clients.inventory.clone();
-
     // 步骤1: 批量预留库存（单次 gRPC 替代 N 次逐项调用）
     let stock_items: Vec<proto::inventory::StockItem> = req
         .items
@@ -39,8 +37,15 @@ async fn create_order_handler(
         })
         .collect();
 
-    let reserve_resp = inventory_client
-        .batch_reserve_stock(proto::inventory::BatchReserveStockRequest { items: stock_items })
+    let reserve_resp = state
+        .clients
+        .call_inventory(|mut client| async move {
+            client
+                .batch_reserve_stock(proto::inventory::BatchReserveStockRequest {
+                    items: stock_items,
+                })
+                .await
+        })
         .await
         .map_err(|e| {
             let app_err: AppError = e.into();
@@ -67,9 +72,14 @@ async fn create_order_handler(
             })
             .collect();
         if !release_items.is_empty() {
-            let _ = inventory_client
-                .batch_release_stock(proto::inventory::BatchReleaseStockRequest {
-                    items: release_items,
+            let _ = state
+                .clients
+                .call_inventory(|mut client| async move {
+                    client
+                        .batch_release_stock(proto::inventory::BatchReleaseStockRequest {
+                            items: release_items,
+                        })
+                        .await
                 })
                 .await;
         }
@@ -86,7 +96,6 @@ async fn create_order_handler(
     }
 
     // 步骤2: 创建订单
-    let mut order_client = state.clients.order.clone();
     let items = req
         .items
         .iter()
@@ -101,7 +110,10 @@ async fn create_order_handler(
         items,
     };
 
-    let order_result = order_client.create_order(order_request).await;
+    let order_result = state
+        .clients
+        .call_order(|mut client| async move { client.create_order(order_request).await })
+        .await;
 
     match order_result {
         Ok(resp) => {
@@ -124,9 +136,14 @@ async fn create_order_handler(
                     quantity: item.quantity,
                 })
                 .collect();
-            let _ = inventory_client
-                .batch_release_stock(proto::inventory::BatchReleaseStockRequest {
-                    items: release_items,
+            let _ = state
+                .clients
+                .call_inventory(|mut client| async move {
+                    client
+                        .batch_release_stock(proto::inventory::BatchReleaseStockRequest {
+                            items: release_items,
+                        })
+                        .await
                 })
                 .await;
             Err(app_err)
@@ -138,9 +155,11 @@ async fn get_order_handler(
     State(state): State<Arc<AppState>>,
     Path(id): Path<u64>,
 ) -> Result<Json<ApiResponse<OrderDto>>, AppError> {
-    let mut client = state.clients.order.clone();
     let request = proto::order::GetOrderRequest { order_id: id };
-    let response = client.get_order(request).await?;
+    let response = state
+        .clients
+        .call_order(|mut client| async move { client.get_order(request).await })
+        .await?;
     let inner = response.into_inner();
 
     Ok(Json(ApiResponse::success(order_to_dto(inner))))
@@ -150,13 +169,15 @@ async fn list_orders_handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ListOrdersQuery>,
 ) -> Result<Json<ApiResponse<ListOrdersResponseDto>>, AppError> {
-    let mut client = state.clients.order.clone();
     let request = proto::order::ListOrdersRequest {
         user_id: query.user_id,
         page: query.page,
         page_size: query.page_size,
     };
-    let response = client.list_orders(request).await?;
+    let response = state
+        .clients
+        .call_order(|mut client| async move { client.list_orders(request).await })
+        .await?;
     let inner = response.into_inner();
 
     let orders = inner.orders.into_iter().map(order_to_dto).collect();
@@ -174,12 +195,14 @@ async fn update_order_status_handler(
     Path(id): Path<u64>,
     Json(req): Json<UpdateOrderStatusRequest>,
 ) -> Result<Json<ApiResponse<OrderDto>>, AppError> {
-    let mut client = state.clients.order.clone();
     let request = proto::order::UpdateOrderStatusRequest {
         order_id: id,
         status: req.status,
     };
-    let response = client.update_order_status(request).await?;
+    let response = state
+        .clients
+        .call_order(|mut client| async move { client.update_order_status(request).await })
+        .await?;
     let inner = response.into_inner();
 
     Ok(Json(ApiResponse::success(order_to_dto(inner))))

@@ -39,16 +39,27 @@ pub async fn health_check_handler(State(state): State<Arc<AppState>>) -> impl In
         }
     }
 
-    let mut auth_client = state.clients.auth.clone();
-    let mut product_client = state.clients.product.clone();
-    let mut order_client = state.clients.order.clone();
-    let mut inventory_client = state.clients.inventory.clone();
-
     let (auth_ok, product_ok, order_ok, inventory_ok) = tokio::join!(
-        check_grpc(auth_client.get_user(proto::auth::GetUserRequest { user_id: 0 })),
-        check_grpc(product_client.get_product(proto::product::GetProductRequest { product_id: 0 })),
-        check_grpc(order_client.get_order(proto::order::GetOrderRequest { order_id: 0 })),
-        check_grpc(inventory_client.get_stock(proto::inventory::GetStockRequest { product_id: 0 })),
+        check_grpc(state.clients.call_auth(|mut client| async move {
+            client
+                .get_user(proto::auth::GetUserRequest { user_id: 0 })
+                .await
+        })),
+        check_grpc(state.clients.call_product(|mut client| async move {
+            client
+                .get_product(proto::product::GetProductRequest { product_id: 0 })
+                .await
+        })),
+        check_grpc(state.clients.call_order(|mut client| async move {
+            client
+                .get_order(proto::order::GetOrderRequest { order_id: 0 })
+                .await
+        })),
+        check_grpc(state.clients.call_inventory(|mut client| async move {
+            client
+                .get_stock(proto::inventory::GetStockRequest { product_id: 0 })
+                .await
+        })),
     );
 
     let services = vec![

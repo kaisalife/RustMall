@@ -24,6 +24,8 @@ pub struct AppConfig {
     pub tracing: TracingConfig,
     #[serde(default)]
     pub rate_limit: RateLimitConfig,
+    #[serde(default)]
+    pub nacos: NacosConfigSection,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -41,11 +43,26 @@ pub struct ServiceConfig {
     pub host: String,
     pub port: u16,
     pub worker_id: u64,
+    /// 注册到服务发现的可访问地址（Docker 中为服务名，如 "auth-service"）
+    /// 未设置时使用 host
+    #[serde(default)]
+    pub advertise_host: Option<String>,
 }
 
 impl ServiceConfig {
     pub fn address(&self) -> String {
         format!("{}:{}", self.host, self.port)
+    }
+
+    /// 获取注册到服务发现的可访问地址
+    pub fn advertise_address(&self) -> String {
+        let host = self.advertise_host.as_ref().unwrap_or(&self.host);
+        format!("{}:{}", host, self.port)
+    }
+
+    /// 获取注册到服务发现的可访问 IP
+    pub fn advertise_ip(&self) -> &str {
+        self.advertise_host.as_ref().unwrap_or(&self.host)
     }
 }
 
@@ -123,6 +140,18 @@ pub struct PaymentServiceConfig {
     pub host: String,
     pub port: u16,
     pub worker_id: u64,
+    #[serde(default)]
+    pub advertise_host: Option<String>,
+}
+
+impl PaymentServiceConfig {
+    pub fn address(&self) -> String {
+        format!("{}:{}", self.host, self.port)
+    }
+
+    pub fn advertise_ip(&self) -> &str {
+        self.advertise_host.as_ref().unwrap_or(&self.host)
+    }
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -157,4 +186,35 @@ fn default_grpc_timeout() -> u64 {
 
 fn default_bcrypt_cost() -> u32 {
     12
+}
+
+/// Nacos 服务注册与发现配置
+#[derive(Debug, Deserialize, Clone)]
+#[serde(default)]
+pub struct NacosConfigSection {
+    /// Nacos 服务端地址（如 "nacos:8848"）
+    pub server_addr: String,
+    /// 命名空间（"public" 对应 ""）
+    pub namespace: String,
+    /// 用户名
+    pub username: Option<String>,
+    /// 密码
+    pub password: Option<String>,
+    /// 应用名称
+    pub app_name: String,
+    /// 是否启用服务注册（开发环境可关闭）
+    pub enabled: bool,
+}
+
+impl Default for NacosConfigSection {
+    fn default() -> Self {
+        Self {
+            server_addr: "nacos:8848".to_string(),
+            namespace: "".to_string(),
+            username: None,
+            password: None,
+            app_name: "simple_trade".to_string(),
+            enabled: false,
+        }
+    }
 }

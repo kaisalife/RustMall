@@ -98,14 +98,19 @@ services:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/simple_trade
       APP_AUTH_SERVICE__HOST: 0.0.0.0
       APP_AUTH_SERVICE__PORT: "50051"
+      APP_AUTH_SERVICE__ADVERTISE_HOST: auth-service
       APP_DATABASE__MAX_CONNECTIONS: "20"
       APP_KAFKA__BROKERS: "kafka:9092"
+      APP_NACOS__SERVER_ADDR: "nacos:8848"
+      APP_NACOS__ENABLED: "true"
     ports:
       - "50051:50051"
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_started
+      nacos:
         condition: service_started
     restart: unless-stopped
     networks:
@@ -122,14 +127,19 @@ services:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/simple_trade
       APP_PRODUCT_SERVICE__HOST: 0.0.0.0
       APP_PRODUCT_SERVICE__PORT: "50052"
+      APP_PRODUCT_SERVICE__ADVERTISE_HOST: product-service
       APP_DATABASE__MAX_CONNECTIONS: "40"
       APP_KAFKA__BROKERS: "kafka:9092"
+      APP_NACOS__SERVER_ADDR: "nacos:8848"
+      APP_NACOS__ENABLED: "true"
     ports:
       - "50052:50052"
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_started
+      nacos:
         condition: service_started
     restart: unless-stopped
     networks:
@@ -146,14 +156,19 @@ services:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/simple_trade
       APP_ORDER_SERVICE__HOST: 0.0.0.0
       APP_ORDER_SERVICE__PORT: "50053"
+      APP_ORDER_SERVICE__ADVERTISE_HOST: order-service
       APP_DATABASE__MAX_CONNECTIONS: "30"
       APP_KAFKA__BROKERS: "kafka:9092"
+      APP_NACOS__SERVER_ADDR: "nacos:8848"
+      APP_NACOS__ENABLED: "true"
     ports:
       - "50053:50053"
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_started
+      nacos:
         condition: service_started
     restart: unless-stopped
     networks:
@@ -170,14 +185,19 @@ services:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/simple_trade
       APP_INVENTORY_SERVICE__HOST: 0.0.0.0
       APP_INVENTORY_SERVICE__PORT: "50054"
+      APP_INVENTORY_SERVICE__ADVERTISE_HOST: inventory-service
       APP_DATABASE__MAX_CONNECTIONS: "30"
       APP_KAFKA__BROKERS: "kafka:9092"
+      APP_NACOS__SERVER_ADDR: "nacos:8848"
+      APP_NACOS__ENABLED: "true"
     ports:
       - "50054:50054"
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_started
+      nacos:
         condition: service_started
     restart: unless-stopped
     networks:
@@ -194,14 +214,19 @@ services:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/simple_trade
       APP_EMAIL_SERVICE__HOST: 0.0.0.0
       APP_EMAIL_SERVICE__PORT: "50055"
+      APP_EMAIL_SERVICE__ADVERTISE_HOST: email-service
       APP_DATABASE__MAX_CONNECTIONS: "10"
       APP_KAFKA__BROKERS: "kafka:9092"
+      APP_NACOS__SERVER_ADDR: "nacos:8848"
+      APP_NACOS__ENABLED: "true"
     ports:
       - "50055:50055"
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_started
+      nacos:
         condition: service_started
     restart: unless-stopped
     networks:
@@ -218,14 +243,19 @@ services:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/simple_trade
       APP_PAYMENT_SERVICE__HOST: 0.0.0.0
       APP_PAYMENT_SERVICE__PORT: "50056"
+      APP_PAYMENT_SERVICE__ADVERTISE_HOST: payment-service
       APP_DATABASE__MAX_CONNECTIONS: "10"
       APP_KAFKA__BROKERS: "kafka:9092"
+      APP_NACOS__SERVER_ADDR: "nacos:8848"
+      APP_NACOS__ENABLED: "true"
     ports:
       - "50056:50056"
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_started
+      nacos:
         condition: service_started
     restart: unless-stopped
     networks:
@@ -253,6 +283,8 @@ services:
       APP_PAYMENT_SERVICE__PORT: "50056"
       APP_REDIS__URL: redis://redis:6379
       APP_KAFKA__BROKERS: "kafka:9092"
+      APP_NACOS__SERVER_ADDR: "nacos:8848"
+      APP_NACOS__ENABLED: "true"
     # 不暴露端口，仅通过 nginx 访问
     expose:
       - "8080"
@@ -263,6 +295,7 @@ services:
       - inventory-service
       - payment-service
       - redis
+      - nacos
     logging:
       driver: json-file
       options:

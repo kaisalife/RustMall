@@ -87,3 +87,10 @@ consumer_group = "simple_trade_group"
 [rate_limit]
 enabled = true
 whitelist_ips = ["127.0.0.1", "::1"]
+
+# Nacos Service Discovery Configuration
+[nacos]
+server_addr = "nacos:8848"
+namespace = ""
+app_name = "simple_trade"
+enabled = false

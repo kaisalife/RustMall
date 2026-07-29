@@ -6,11 +6,8 @@
 //! 3. 创建 PostgreSQL 连接池
 //! 4. 依赖注入：构建数据库封装、仓储、ID 生成器、渠道适配器、
 //!    应用服务（内部自建幂等服务与渠道路由）、gRPC 服务实现
-//! 5. 启动 Tonic gRPC server，监听 0.0.0.0:50056
+//! 5. 启动 Tonic gRPC server，监听配置指定的地址
 //! 6. 等待优雅关闭信号（Ctrl+C / SIGTERM）
-//!
-//! 注意：当前 `AppConfig` 尚未包含 `payment_service` 配置段，
-//! 服务地址与 worker_id 暂以常量硬编码，后续应补齐配置项。
 
 // payment-service 尚在开发中，部分领域模型与应用服务方法尚未接入调用链。
 #![allow(dead_code)]
@@ -22,21 +19,17 @@ mod interface;
 
 use std::sync::Arc;
 
-use common::{create_pool, init_tracing, load_config, SnowflakeIdGenerator};
+use common::{create_pool, init_tracing, load_config, AppError, SnowflakeIdGenerator};
 use infrastructure::{
     PaymentChannelAdapter, PaymentDatabase, PgPaymentRepository, PgRefundRepository,
     PgTransactionRepository, StubChannelAdapter,
 };
 use interface::PaymentServiceImpl;
 use proto::payment::payment_service_server::PaymentServiceServer;
+use service_discovery::{NacosConfig, NacosRegistry, ServiceInstance, ServiceRegistry};
 use tonic::transport::Server;
 
 use application::PaymentApplicationService;
-
-/// gRPC 监听地址。后续应迁移至配置项 `[payment_service]`。
-const PAYMENT_SERVICE_ADDR: &str = "0.0.0.0:50056";
-/// 雪花算法 worker_id（其他服务占用 1~5，支付服务使用 6）。
-const PAYMENT_WORKER_ID: u64 = 6;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -50,7 +43,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "payment_service=debug,tonic=info",
     );
 
-    let addr = PAYMENT_SERVICE_ADDR.parse()?;
+    let addr = format!(
+        "{}:{}",
+        config.payment_service.host, config.payment_service.port
+    )
+    .parse()
+    .map_err(|e| AppError::Config(format!("Invalid payment service address: {}", e)))?;
 
     tracing::info!("Payment Service starting on {}", addr);
 
@@ -66,7 +64,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 4.2 雪花 ID 生成器（用于支付订单、流水、退款单主键）
     let id_generator = Arc::new(
-        SnowflakeIdGenerator::new(PAYMENT_WORKER_ID).expect("Failed to create ID generator"),
+        SnowflakeIdGenerator::new(config.payment_service.worker_id)
+            .expect("Failed to create ID generator"),
     );
 
     // 4.3 渠道适配器：开发环境使用测试桩，生产环境替换为真实适配器
@@ -88,6 +87,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let payment_service_impl = PaymentServiceImpl::new(payment_service);
 
     tracing::info!("Payment Service started successfully");
+
+    // 在 gRPC server 启动前注册到 Nacos
+    if config.nacos.enabled {
+        let nacos_config = NacosConfig::from(config.nacos.clone());
+        match NacosRegistry::new(&nacos_config).await {
+            Ok(registry) => {
+                let instance = ServiceInstance::new(
+                    "payment-service",
+                    config.payment_service.advertise_ip(),
+                    config.payment_service.port,
+                );
+                if let Err(e) = registry.register(instance).await {
+                    tracing::warn!("Failed to register to Nacos: {}, service will start anyway", e);
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to connect to Nacos: {}, service will start anyway", e);
+            }
+        }
+    }
 
     // 5. 启动 gRPC server，注册优雅关闭
     Server::builder()

@@ -23,6 +23,7 @@ common = { path = "../../crates/common" }
 proto = { path = "../../crates/proto" }
 idempotency = { path = "../../crates/idempotency" }
 event-bus = { path = "../../crates/event-bus" }
+service-discovery = { path = "../../crates/service-discovery" }
 
 [[bin]]
 name = "payment-service"

@@ -10,6 +10,7 @@ sqlx.workspace = true
 common = { path = "../../crates/common" }
 db-migration = { path = "../../crates/db-migration" }
 proto = { path = "../../crates/proto" }
+service-discovery = { path = "../../crates/service-discovery" }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 figment.workspace = true

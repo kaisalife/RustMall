@@ -29,6 +29,7 @@ tower-middleware = { path = "../../crates/tower-middleware" }
 metrics = { path = "../../crates/metrics" }
 redis-cache = { path = "../../crates/redis-cache" }
 event-bus = { path = "../../crates/event-bus" }
+service-discovery = { path = "../../crates/service-discovery" }
 tower.workspace = true
 tower-http.workspace = true
 sqlx.workspace = true
