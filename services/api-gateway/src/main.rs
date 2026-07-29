@@ -15,8 +15,8 @@ use tower_middleware::{
 
 use api_gateway::grpc_clients;
 use api_gateway::routes::{
-    audit_routes, auth_routes, echo_handler, health_check_handler, inventory_routes, order_routes,
-    ping_handler, product_routes, user_routes,
+    audit_routes, auth_routes, auth_v2_routes, echo_handler, health_check_handler,
+    inventory_routes, order_routes, ping_handler, product_routes, user_routes,
 };
 use api_gateway::state::AppState;
 use service_discovery::{NacosConfig, NacosRegistry};
@@ -143,7 +143,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let strict_limiter = Arc::new(create_strict_rate_limiter());
 
     // 公共路由（无需认证）
-    let public_routes = Router::new().nest("/api/auth", auth_routes());
+    let public_routes = Router::new().nest("/api/v1/auth", auth_routes());
     // 对认证接口使用严格限流（防止暴力破解）
     let public_routes = if rate_limit_cfg.enabled {
         public_routes.layer(middleware::from_fn(create_rate_limit_middleware(
@@ -156,11 +156,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 受保护路由（需要认证）
     let protected_routes = Router::new()
-        .nest("/api/users", user_routes())
-        .nest("/api/products", product_routes())
-        .nest("/api/orders", order_routes())
-        .nest("/api/inventory", inventory_routes())
-        .nest("/api/audit", audit_routes())
+        .nest("/api/v1/users", user_routes())
+        .nest("/api/v1/products", product_routes())
+        .nest("/api/v1/orders", order_routes())
+        .nest("/api/v1/inventory", inventory_routes())
+        .nest("/api/v1/audit", audit_routes())
+        .nest("/api/v2/users", auth_v2_routes())
         // JWT 认证中间件
         .layer(middleware::from_fn(create_auth_middleware(jwt_secret)));
     // 默认限流

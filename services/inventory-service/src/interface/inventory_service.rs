@@ -5,7 +5,7 @@ use crate::application::command::{
 };
 use crate::application::InventoryApplicationService;
 
-use proto::inventory::{
+use proto::inventory::v1::{
     inventory_service_server::InventoryService, AddStockRequest, AddStockResponse,
     BatchGetStockRequest, BatchGetStockResponse, BatchReleaseStockRequest,
     BatchReleaseStockResponse, BatchReserveStockRequest, BatchReserveStockResponse,

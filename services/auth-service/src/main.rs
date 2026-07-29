@@ -8,8 +8,9 @@ use std::sync::Arc;
 
 use common::{init_tracing, load_config, SnowflakeIdGenerator};
 use infrastructure::{DatabaseConnection, UserRepositoryImpl};
-use interface::AuthServiceImpl;
-use proto::auth::auth_service_server::AuthServiceServer;
+use interface::{AuthServiceImpl, AuthServiceV2Impl};
+use proto::auth::v1::auth_service_server::AuthServiceServer as AuthServiceServerV1;
+use proto::auth::v2::auth_service_server::AuthServiceServer as AuthServiceServerV2;
 use service_discovery::{NacosConfig, NacosRegistry, ServiceInstance, ServiceRegistry};
 use tonic::transport::Server;
 
@@ -78,7 +79,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Create gRPC service
-    let auth_service_impl = AuthServiceImpl::new(auth_service);
+    let auth_service_impl = AuthServiceImpl::new(auth_service.clone());
+    let auth_service_v2_impl = AuthServiceV2Impl::new(auth_service);
 
     tracing::info!("");
     tracing::info!("========================================");
@@ -114,8 +116,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start serving
     Server::builder()
-        .add_service(AuthServiceServer::with_interceptor(
+        .add_service(AuthServiceServerV1::with_interceptor(
             auth_service_impl,
+            tower_middleware::TraceContextExtractor,
+        ))
+        .add_service(AuthServiceServerV2::with_interceptor(
+            auth_service_v2_impl,
             tower_middleware::TraceContextExtractor,
         ))
         .serve_with_shutdown(addr, shutdown_signal())

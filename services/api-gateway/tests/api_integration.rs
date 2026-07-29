@@ -20,10 +20,11 @@ use api_gateway::routes::{
 };
 use api_gateway::state::AppState;
 
-use proto::auth::auth_service_client::AuthServiceClient;
-use proto::inventory::inventory_service_client::InventoryServiceClient;
-use proto::order::order_service_client::OrderServiceClient;
-use proto::product::product_service_client::ProductServiceClient;
+use proto::auth::v1::auth_service_client::AuthServiceClient;
+use proto::auth::v2::auth_service_client::AuthServiceClient as AuthServiceClientV2;
+use proto::inventory::v1::inventory_service_client::InventoryServiceClient;
+use proto::order::v1::order_service_client::OrderServiceClient;
+use proto::product::v1::product_service_client::ProductServiceClient;
 
 use tower_middleware::auth::create_auth_middleware;
 use tower_middleware::rate_limit::{create_default_rate_limiter, create_rate_limit_middleware};
@@ -42,6 +43,7 @@ fn make_test_state() -> Arc<AppState> {
 
     let clients = GrpcClients {
         auth: AuthServiceClient::with_interceptor(channel.clone(), TraceContextInjector),
+        auth_v2: AuthServiceClientV2::with_interceptor(channel.clone(), TraceContextInjector),
         product: ProductServiceClient::with_interceptor(channel.clone(), TraceContextInjector),
         order: OrderServiceClient::with_interceptor(channel.clone(), TraceContextInjector),
         inventory: InventoryServiceClient::with_interceptor(channel, TraceContextInjector),
@@ -143,7 +145,7 @@ fn build_test_app(state: Arc<AppState>) -> Router {
 
     // 公共路由（无需认证）
     let public_routes = Router::new()
-        .nest("/api/auth", auth_routes())
+        .nest("/api/v1/auth", auth_routes())
         .layer(middleware::from_fn(create_rate_limit_middleware(
             strict_limiter,
             std::sync::Arc::new(vec![]),
@@ -151,10 +153,10 @@ fn build_test_app(state: Arc<AppState>) -> Router {
 
     // 受保护路由（需要认证）
     let protected_routes = Router::new()
-        .nest("/api/users", user_routes())
-        .nest("/api/products", product_routes())
-        .nest("/api/orders", order_routes())
-        .nest("/api/inventory", inventory_routes())
+        .nest("/api/v1/users", user_routes())
+        .nest("/api/v1/products", product_routes())
+        .nest("/api/v1/orders", order_routes())
+        .nest("/api/v1/inventory", inventory_routes())
         .layer(middleware::from_fn(create_auth_middleware(jwt_secret)))
         .layer(middleware::from_fn(create_rate_limit_middleware(
             default_limiter,
@@ -201,7 +203,7 @@ async fn test_unauthorized_access_to_protected_route() {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/users/1")
+                .uri("/api/v1/users/1")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -216,12 +218,12 @@ async fn test_register_with_invalid_body_returns_400() {
     let state = make_test_state();
     let app = build_test_app(state);
 
-    // POST /api/auth/register 无 body，JSON 解析失败，应返回 400
+    // POST /api/v1/auth/register 无 body，JSON 解析失败，应返回 400
     let response = app
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/auth/register")
+                .uri("/api/v1/auth/register")
                 .header("Content-Type", "application/json")
                 .body(Body::empty())
                 .unwrap(),

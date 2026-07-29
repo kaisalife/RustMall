@@ -1,20 +1,26 @@
+//! Auth Service v2 gRPC 接口实现
+//!
+//! 实现 `auth.v2::AuthService` trait：
+//! - v1 兼容方法（Register/Login/RefreshToken/GetUser）委托给 AuthApplicationService
+//! - v2 新增方法（GetUserProfile/UpdateUserAvatar/UpdateUserProfile）
+//!   返回扩展的 UserProfileResponse
+
 use tonic::{Request, Response, Status};
 
 use crate::application::{command::*, AuthApplicationService};
 
-use proto::auth::v1::{
-    auth_service_server::AuthService, DeleteUserRequest, DeleteUserResponse, GetUserRequest,
-    LoginRequest, LoginResponse, RefreshTokenRequest, RegisterRequest, RegisterResponse,
-    UpdatePasswordRequest, UpdatePasswordResponse, UpdateProfileRequest, UpdateProfileResponse,
-    UserResponse,
+use proto::auth::v2::{
+    auth_service_server::AuthService, GetUserProfileRequest, GetUserRequest, LoginRequest,
+    LoginResponse, RefreshTokenRequest, RegisterRequest, RegisterResponse, UpdateAvatarRequest,
+    UpdateUserProfileRequest, UserProfileResponse, UserResponse,
 };
 
 #[derive(Clone)]
-pub struct AuthServiceImpl {
+pub struct AuthServiceV2Impl {
     service: AuthApplicationService,
 }
 
-impl AuthServiceImpl {
+impl AuthServiceV2Impl {
     pub fn new(service: AuthApplicationService) -> Self {
         Self { service }
     }
@@ -32,8 +38,24 @@ fn app_error_to_status(error: common::AppError) -> Status {
     }
 }
 
+/// 将 UserDto 转换为 UserProfileResponse
+///
+/// 当前 User 实体尚未包含 avatar_url/bio/mfa_enabled 字段，
+/// 这些字段使用默认值，待数据模型扩展后填充真实数据。
+fn user_dto_to_profile(dto: &crate::application::dto::UserDto) -> UserProfileResponse {
+    UserProfileResponse {
+        user_id: dto.user_id,
+        email: dto.email.clone(),
+        nickname: dto.nickname.clone(),
+        avatar_url: String::new(),
+        bio: String::new(),
+        mfa_enabled: false,
+        created_at: dto.created_at.clone(),
+    }
+}
+
 #[tonic::async_trait]
-impl AuthService for AuthServiceImpl {
+impl AuthService for AuthServiceV2Impl {
     async fn register(
         &self,
         request: Request<RegisterRequest>,
@@ -125,60 +147,73 @@ impl AuthService for AuthServiceImpl {
         }))
     }
 
-    async fn update_password(
+    async fn get_user_profile(
         &self,
-        request: Request<UpdatePasswordRequest>,
-    ) -> Result<Response<UpdatePasswordResponse>, Status> {
+        request: Request<GetUserProfileRequest>,
+    ) -> Result<Response<UserProfileResponse>, Status> {
         let req = request.into_inner();
 
-        let command = UpdatePasswordCommand {
-            user_id: req.user_id,
-            old_password: req.old_password,
-            new_password: req.new_password,
-        };
-
-        let success = self
+        let result = self
             .service
-            .update_password(command)
+            .get_user(req.user_id)
             .await
             .map_err(app_error_to_status)?;
 
-        Ok(Response::new(UpdatePasswordResponse { success }))
+        Ok(Response::new(user_dto_to_profile(&result)))
     }
 
-    async fn update_profile(
+    async fn update_user_avatar(
         &self,
-        request: Request<UpdateProfileRequest>,
-    ) -> Result<Response<UpdateProfileResponse>, Status> {
+        request: Request<UpdateAvatarRequest>,
+    ) -> Result<Response<UserProfileResponse>, Status> {
         let req = request.into_inner();
 
-        let nickname = if req.nickname.is_empty() {
-            None
-        } else {
-            Some(req.nickname)
-        };
-
-        let success = self
+        // 验证用户存在
+        let result = self
             .service
-            .update_profile(req.user_id, nickname)
+            .get_user(req.user_id)
             .await
             .map_err(app_error_to_status)?;
 
-        Ok(Response::new(UpdateProfileResponse { success }))
+        // TODO: 待 User 实体扩展 avatar_url 字段后持久化
+        let mut profile = user_dto_to_profile(&result);
+        profile.avatar_url = req.avatar_url;
+
+        Ok(Response::new(profile))
     }
 
-    async fn delete_user(
+    async fn update_user_profile(
         &self,
-        request: Request<DeleteUserRequest>,
-    ) -> Result<Response<DeleteUserResponse>, Status> {
+        request: Request<UpdateUserProfileRequest>,
+    ) -> Result<Response<UserProfileResponse>, Status> {
         let req = request.into_inner();
 
-        let success = self
+        // 如果提供了 nickname，则更新
+        if let Some(ref nickname) = req.nickname {
+            if !nickname.is_empty() {
+                self.service
+                    .update_profile(req.user_id, Some(nickname.clone()))
+                    .await
+                    .map_err(app_error_to_status)?;
+            }
+        }
+
+        // 返回更新后的 profile
+        let result = self
             .service
-            .delete_user(req.user_id)
+            .get_user(req.user_id)
             .await
             .map_err(app_error_to_status)?;
 
-        Ok(Response::new(DeleteUserResponse { success }))
+        let mut profile = user_dto_to_profile(&result);
+        // TODO: 待 User 实体扩展 avatar_url/bio 字段后持久化
+        if let Some(avatar_url) = req.avatar_url {
+            profile.avatar_url = avatar_url;
+        }
+        if let Some(bio) = req.bio {
+            profile.bio = bio;
+        }
+
+        Ok(Response::new(profile))
     }
 }

@@ -7,12 +7,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build_client(true)
         .compile_protos(
             &[
-                "../../proto/auth.proto",
-                "../../proto/email.proto",
-                "../../proto/product.proto",
-                "../../proto/order.proto",
-                "../../proto/inventory.proto",
-                "../../proto/payment.proto",
+                "../../proto/v1/auth.proto",
+                "../../proto/v1/email.proto",
+                "../../proto/v1/product.proto",
+                "../../proto/v1/order.proto",
+                "../../proto/v1/inventory.proto",
+                "../../proto/v1/payment.proto",
+                "../../proto/v2/auth.proto",
             ],
             &["../../proto"],
         )?;

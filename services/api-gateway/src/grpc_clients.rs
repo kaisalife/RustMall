@@ -11,10 +11,11 @@ use std::time::Duration;
 
 use tonic::transport::{Channel, Endpoint};
 
-use proto::auth::auth_service_client::AuthServiceClient;
-use proto::inventory::inventory_service_client::InventoryServiceClient;
-use proto::order::order_service_client::OrderServiceClient;
-use proto::product::product_service_client::ProductServiceClient;
+use proto::auth::v1::auth_service_client::AuthServiceClient;
+use proto::auth::v2::auth_service_client::AuthServiceClient as AuthServiceClientV2;
+use proto::inventory::v1::inventory_service_client::InventoryServiceClient;
+use proto::order::v1::order_service_client::OrderServiceClient;
+use proto::product::v1::product_service_client::ProductServiceClient;
 
 use service_discovery::{NacosRegistry, ServiceRegistry};
 use tower_middleware::{TraceContextInjector, TracedChannel};
@@ -43,6 +44,8 @@ pub struct StaticAddrs {
 pub struct GrpcClients {
     /// 认证服务客户端
     pub auth: AuthServiceClient<TracedChannel>,
+    /// 认证服务 v2 客户端
+    pub auth_v2: AuthServiceClientV2<TracedChannel>,
     /// 商品服务客户端
     pub product: ProductServiceClient<TracedChannel>,
     /// 订单服务客户端
@@ -174,6 +177,7 @@ impl GrpcClients {
     ) -> common::AppResult<Self> {
         let auth_channel =
             create_channel_from_nacos(registry, "auth-service", grpc_timeout).await?;
+        let auth_v2_channel = auth_channel.clone();
         let product_channel =
             create_channel_from_nacos(registry, "product-service", grpc_timeout).await?;
         let order_channel =
@@ -183,6 +187,7 @@ impl GrpcClients {
 
         Ok(Self {
             auth: AuthServiceClient::with_interceptor(auth_channel, TraceContextInjector),
+            auth_v2: AuthServiceClientV2::with_interceptor(auth_v2_channel, TraceContextInjector),
             product: ProductServiceClient::with_interceptor(product_channel, TraceContextInjector),
             order: OrderServiceClient::with_interceptor(order_channel, TraceContextInjector),
             inventory: InventoryServiceClient::with_interceptor(
@@ -202,12 +207,14 @@ impl GrpcClients {
         grpc_timeout: Duration,
     ) -> common::AppResult<Self> {
         let auth_channel = create_channel(&addrs.auth, grpc_timeout).await?;
+        let auth_v2_channel = auth_channel.clone();
         let product_channel = create_channel(&addrs.product, grpc_timeout).await?;
         let order_channel = create_channel(&addrs.order, grpc_timeout).await?;
         let inventory_channel = create_channel(&addrs.inventory, grpc_timeout).await?;
 
         Ok(Self {
             auth: AuthServiceClient::with_interceptor(auth_channel, TraceContextInjector),
+            auth_v2: AuthServiceClientV2::with_interceptor(auth_v2_channel, TraceContextInjector),
             product: ProductServiceClient::with_interceptor(product_channel, TraceContextInjector),
             order: OrderServiceClient::with_interceptor(order_channel, TraceContextInjector),
             inventory: InventoryServiceClient::with_interceptor(
@@ -240,6 +247,34 @@ impl GrpcClients {
             ));
         }
         let client = self.auth.clone();
+        match f(client).await {
+            Ok(v) => {
+                self.auth_cb.record_success();
+                Ok(v)
+            }
+            Err(e) => {
+                if is_service_error(&e) {
+                    self.auth_cb.record_failure();
+                }
+                Err(e)
+            }
+        }
+    }
+
+    /// 执行带熔断器保护的 auth v2 服务调用
+    ///
+    /// 复用 auth 服务的熔断器（同一后端服务）。
+    pub async fn call_auth_v2<F, Fut, T>(&self, f: F) -> Result<T, tonic::Status>
+    where
+        F: FnOnce(AuthServiceClientV2<TracedChannel>) -> Fut,
+        Fut: Future<Output = Result<T, tonic::Status>>,
+    {
+        if !self.auth_cb.can_proceed() {
+            return Err(tonic::Status::unavailable(
+                "Circuit breaker open for auth service",
+            ));
+        }
+        let client = self.auth_v2.clone();
         match f(client).await {
             Ok(v) => {
                 self.auth_cb.record_success();

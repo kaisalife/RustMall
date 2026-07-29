@@ -3,8 +3,8 @@
 use common::AppResult;
 use tonic::transport::Channel;
 
-use proto::email::email_service_client::EmailServiceClient;
-use proto::email::SendVerificationEmailRequest;
+use proto::email::v1::email_service_client::EmailServiceClient;
+use proto::email::v1::SendVerificationEmailRequest;
 
 #[derive(Clone)]
 pub struct EmailServiceClientWrapper {

@@ -76,7 +76,7 @@ Write-Bench "3. 健康检查端点（含4个gRPC调用）- 50并发" "oha -z 10s
 # ============================================================
 
 Write-Bench "4. 登录接口压测 - 50并发" @"
-oha -z 10s -c 50 -m POST -d '{\"email\":\"bench@test.com\",\"password\":\"123456\"}' -H 'Content-Type: application/json' `"$BaseUrl/api/auth/login`"
+oha -z 10s -c 50 -m POST -d '{\"email\":\"bench@test.com\",\"password\":\"123456\"}' -H 'Content-Type: application/json' `"$BaseUrl/api/v1/auth/login`"
 "@
 
 # ============================================================

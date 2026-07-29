@@ -28,10 +28,10 @@ async fn create_order_handler(
     Json(req): Json<CreateOrderRequest>,
 ) -> Result<Json<ApiResponse<OrderDto>>, AppError> {
     // 步骤1: 批量预留库存（单次 gRPC 替代 N 次逐项调用）
-    let stock_items: Vec<proto::inventory::StockItem> = req
+    let stock_items: Vec<proto::inventory::v1::StockItem> = req
         .items
         .iter()
-        .map(|item| proto::inventory::StockItem {
+        .map(|item| proto::inventory::v1::StockItem {
             product_id: item.product_id,
             quantity: item.quantity,
         })
@@ -41,7 +41,7 @@ async fn create_order_handler(
         .clients
         .call_inventory(|mut client| async move {
             client
-                .batch_reserve_stock(proto::inventory::BatchReserveStockRequest {
+                .batch_reserve_stock(proto::inventory::v1::BatchReserveStockRequest {
                     items: stock_items,
                 })
                 .await
@@ -62,11 +62,11 @@ async fn create_order_handler(
             .filter(|r| r.success)
             .map(|r| r.product_id)
             .collect();
-        let release_items: Vec<proto::inventory::StockItem> = req
+        let release_items: Vec<proto::inventory::v1::StockItem> = req
             .items
             .iter()
             .filter(|i| succeeded.contains(&i.product_id))
-            .map(|i| proto::inventory::StockItem {
+            .map(|i| proto::inventory::v1::StockItem {
                 product_id: i.product_id,
                 quantity: i.quantity,
             })
@@ -76,7 +76,7 @@ async fn create_order_handler(
                 .clients
                 .call_inventory(|mut client| async move {
                     client
-                        .batch_release_stock(proto::inventory::BatchReleaseStockRequest {
+                        .batch_release_stock(proto::inventory::v1::BatchReleaseStockRequest {
                             items: release_items,
                         })
                         .await
@@ -99,13 +99,13 @@ async fn create_order_handler(
     let items = req
         .items
         .iter()
-        .map(|item| proto::order::OrderItem {
+        .map(|item| proto::order::v1::OrderItem {
             product_id: item.product_id,
             quantity: item.quantity,
             unit_price: item.unit_price,
         })
         .collect();
-    let order_request = proto::order::CreateOrderRequest {
+    let order_request = proto::order::v1::CreateOrderRequest {
         user_id: req.user_id,
         items,
     };
@@ -128,10 +128,10 @@ async fn create_order_handler(
                 "Order creation failed, compensating by releasing reserved stock: {}",
                 app_err
             );
-            let release_items: Vec<proto::inventory::StockItem> = req
+            let release_items: Vec<proto::inventory::v1::StockItem> = req
                 .items
                 .iter()
-                .map(|item| proto::inventory::StockItem {
+                .map(|item| proto::inventory::v1::StockItem {
                     product_id: item.product_id,
                     quantity: item.quantity,
                 })
@@ -140,7 +140,7 @@ async fn create_order_handler(
                 .clients
                 .call_inventory(|mut client| async move {
                     client
-                        .batch_release_stock(proto::inventory::BatchReleaseStockRequest {
+                        .batch_release_stock(proto::inventory::v1::BatchReleaseStockRequest {
                             items: release_items,
                         })
                         .await
@@ -155,7 +155,7 @@ async fn get_order_handler(
     State(state): State<Arc<AppState>>,
     Path(id): Path<u64>,
 ) -> Result<Json<ApiResponse<OrderDto>>, AppError> {
-    let request = proto::order::GetOrderRequest { order_id: id };
+    let request = proto::order::v1::GetOrderRequest { order_id: id };
     let response = state
         .clients
         .call_order(|mut client| async move { client.get_order(request).await })
@@ -169,7 +169,7 @@ async fn list_orders_handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ListOrdersQuery>,
 ) -> Result<Json<ApiResponse<ListOrdersResponseDto>>, AppError> {
-    let request = proto::order::ListOrdersRequest {
+    let request = proto::order::v1::ListOrdersRequest {
         user_id: query.user_id,
         page: query.page,
         page_size: query.page_size,
@@ -195,7 +195,7 @@ async fn update_order_status_handler(
     Path(id): Path<u64>,
     Json(req): Json<UpdateOrderStatusRequest>,
 ) -> Result<Json<ApiResponse<OrderDto>>, AppError> {
-    let request = proto::order::UpdateOrderStatusRequest {
+    let request = proto::order::v1::UpdateOrderStatusRequest {
         order_id: id,
         status: req.status,
     };
@@ -208,7 +208,7 @@ async fn update_order_status_handler(
     Ok(Json(ApiResponse::success(order_to_dto(inner))))
 }
 
-fn order_to_dto(o: proto::order::OrderResponse) -> OrderDto {
+fn order_to_dto(o: proto::order::v1::OrderResponse) -> OrderDto {
     let items = o
         .items
         .into_iter()

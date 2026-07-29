@@ -9,7 +9,7 @@ use crate::domain::{Money, Payment, PaymentChannel, PaymentStatus, Refund};
 
 /// 支付订单 DTO
 ///
-/// 对应 proto::payment::PaymentResponse，由 interface 层转换。
+/// 对应 proto::payment::v1::PaymentResponse，由 interface 层转换。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaymentDto {
     /// 支付订单 ID
@@ -59,7 +59,7 @@ impl From<Payment> for PaymentDto {
 
 /// 退款 DTO
 ///
-/// 对应 proto::payment::RefundResponse，由 interface 层转换。
+/// 对应 proto::payment::v1::RefundResponse，由 interface 层转换。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RefundDto {
     /// 退款单 ID
@@ -94,7 +94,7 @@ impl From<Refund> for RefundDto {
 
 /// 回调处理结果 DTO
 ///
-/// 对应 proto::payment::CallbackResponse，由 interface 层转换。
+/// 对应 proto::payment::v1::CallbackResponse，由 interface 层转换。
 #[derive(Debug, Clone)]
 pub struct CallbackResultDto {
     /// 回调处理是否成功

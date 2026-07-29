@@ -1,7 +1,7 @@
 use crate::application::{OrderApplicationService, OrderDto, OrderItemDto};
 use tonic::{Request, Response, Status};
 
-use proto::order::{
+use proto::order::v1::{
     order_service_server::OrderService, CreateOrderRequest, GetOrderRequest, ListOrdersRequest,
     ListOrdersResponse, OrderItem as ProtoOrderItem, OrderResponse, OrderStatus,
     UpdateOrderStatusRequest,

@@ -7,7 +7,7 @@ mod interface;
 
 use common::{init_tracing, load_config, SnowflakeIdGenerator};
 use interface::EmailServiceImpl;
-use proto::email::email_service_server::EmailServiceServer;
+use proto::email::v1::email_service_server::EmailServiceServer;
 use service_discovery::{NacosConfig, NacosRegistry, ServiceInstance, ServiceRegistry};
 use std::sync::Arc;
 use tonic::transport::Server;

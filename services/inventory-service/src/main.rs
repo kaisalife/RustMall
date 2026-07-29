@@ -8,7 +8,7 @@ use std::sync::Arc;
 use common::{init_tracing, load_config};
 use infrastructure::{DatabaseConnection, InventoryRepositoryImpl};
 use interface::InventoryServiceImpl;
-use proto::inventory::inventory_service_server::InventoryServiceServer;
+use proto::inventory::v1::inventory_service_server::InventoryServiceServer;
 use service_discovery::{NacosConfig, NacosRegistry, ServiceInstance, ServiceRegistry};
 use tonic::transport::Server;
 

@@ -28,7 +28,7 @@ async fn create_product_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateProductRequest>,
 ) -> Result<Json<ApiResponse<ProductDto>>, AppError> {
-    let request = proto::product::CreateProductRequest {
+    let request = proto::product::v1::CreateProductRequest {
         name: req.name,
         description: req.description,
         price: req.price,
@@ -63,7 +63,7 @@ async fn get_product_handler(
         .clients
         .call_product(|mut client| async move {
             client
-                .get_product(proto::product::GetProductRequest { product_id: id })
+                .get_product(proto::product::v1::GetProductRequest { product_id: id })
                 .await
         })
         .await
@@ -112,7 +112,7 @@ async fn update_product_handler(
     Path(id): Path<u64>,
     Json(req): Json<UpdateProductRequest>,
 ) -> Result<Json<ApiResponse<ProductDto>>, AppError> {
-    let request = proto::product::UpdateProductRequest {
+    let request = proto::product::v1::UpdateProductRequest {
         product_id: id,
         name: req.name,
         description: req.description,
@@ -139,7 +139,7 @@ async fn delete_product_handler(
     State(state): State<Arc<AppState>>,
     Path(id): Path<u64>,
 ) -> Result<Json<ApiResponse<DeleteProductResponseDto>>, AppError> {
-    let request = proto::product::DeleteProductRequest { product_id: id };
+    let request = proto::product::v1::DeleteProductRequest { product_id: id };
     let response = state
         .clients
         .call_product(|mut client| async move { client.delete_product(request).await })
@@ -162,7 +162,7 @@ async fn list_products_handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ListProductsQuery>,
 ) -> Result<Json<ApiResponse<ListProductsResponseDto>>, AppError> {
-    let request = proto::product::ListProductsRequest {
+    let request = proto::product::v1::ListProductsRequest {
         category_id: query.category_id,
         min_price: query.min_price,
         max_price: query.max_price,
@@ -201,7 +201,7 @@ async fn list_products_handler(
     }
 }
 
-fn product_to_dto(p: proto::product::ProductResponse) -> ProductDto {
+fn product_to_dto(p: proto::product::v1::ProductResponse) -> ProductDto {
     ProductDto {
         product_id: p.product_id,
         name: p.name,

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package inventory;
+package inventory.v1;
 
 service InventoryService {
     rpc DeductStock(DeductStockRequest) returns (DeductStockResponse);

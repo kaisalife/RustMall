@@ -4,7 +4,7 @@ use prost::Message;
 
 #[test]
 fn test_auth_register_request_serialization() {
-    let request = proto::auth::RegisterRequest {
+    let request = proto::auth::v1::RegisterRequest {
         email: "test@example.com".to_string(),
         password: "password123".to_string(),
         nickname: "TestUser".to_string(),
@@ -12,7 +12,7 @@ fn test_auth_register_request_serialization() {
 
     let mut buf = Vec::new();
     request.encode(&mut buf).unwrap();
-    let decoded = proto::auth::RegisterRequest::decode(&buf[..]).unwrap();
+    let decoded = proto::auth::v1::RegisterRequest::decode(&buf[..]).unwrap();
 
     assert_eq!(decoded.email, "test@example.com");
     assert_eq!(decoded.password, "password123");
@@ -21,7 +21,7 @@ fn test_auth_register_request_serialization() {
 
 #[test]
 fn test_product_create_request_serialization() {
-    let request = proto::product::CreateProductRequest {
+    let request = proto::product::v1::CreateProductRequest {
         name: "Test Product".to_string(),
         description: "A test product".to_string(),
         price: 29.99,
@@ -31,7 +31,7 @@ fn test_product_create_request_serialization() {
 
     let mut buf = Vec::new();
     request.encode(&mut buf).unwrap();
-    let decoded = proto::product::CreateProductRequest::decode(&buf[..]).unwrap();
+    let decoded = proto::product::v1::CreateProductRequest::decode(&buf[..]).unwrap();
 
     assert_eq!(decoded.name, "Test Product");
     assert_eq!(decoded.description, "A test product");
@@ -42,15 +42,15 @@ fn test_product_create_request_serialization() {
 
 #[test]
 fn test_order_create_request_serialization() {
-    let request = proto::order::CreateOrderRequest {
+    let request = proto::order::v1::CreateOrderRequest {
         user_id: 42,
         items: vec![
-            proto::order::OrderItem {
+            proto::order::v1::OrderItem {
                 product_id: 1,
                 quantity: 2,
                 unit_price: 9.99,
             },
-            proto::order::OrderItem {
+            proto::order::v1::OrderItem {
                 product_id: 2,
                 quantity: 3,
                 unit_price: 19.99,
@@ -60,7 +60,7 @@ fn test_order_create_request_serialization() {
 
     let mut buf = Vec::new();
     request.encode(&mut buf).unwrap();
-    let decoded = proto::order::CreateOrderRequest::decode(&buf[..]).unwrap();
+    let decoded = proto::order::v1::CreateOrderRequest::decode(&buf[..]).unwrap();
 
     assert_eq!(decoded.user_id, 42);
     assert_eq!(decoded.items.len(), 2);
@@ -74,14 +74,14 @@ fn test_order_create_request_serialization() {
 
 #[test]
 fn test_inventory_deduct_request_serialization() {
-    let request = proto::inventory::DeductStockRequest {
+    let request = proto::inventory::v1::DeductStockRequest {
         product_id: 99,
         quantity: 5,
     };
 
     let mut buf = Vec::new();
     request.encode(&mut buf).unwrap();
-    let decoded = proto::inventory::DeductStockRequest::decode(&buf[..]).unwrap();
+    let decoded = proto::inventory::v1::DeductStockRequest::decode(&buf[..]).unwrap();
 
     assert_eq!(decoded.product_id, 99);
     assert_eq!(decoded.quantity, 5);

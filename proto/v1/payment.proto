@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package payment;
+package payment.v1;
 
 // 支付服务 - 独立微服务，通过 gRPC 对外提供服务
 // 其他服务通过 adapter 模式调用，完全解耦

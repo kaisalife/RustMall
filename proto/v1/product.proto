@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package product;
+package product.v1;
 
 service ProductService {
     rpc CreateProduct(CreateProductRequest) returns (ProductResponse);

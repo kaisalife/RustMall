@@ -25,7 +25,7 @@ use infrastructure::{
     PgTransactionRepository, StubChannelAdapter,
 };
 use interface::PaymentServiceImpl;
-use proto::payment::payment_service_server::PaymentServiceServer;
+use proto::payment::v1::payment_service_server::PaymentServiceServer;
 use service_discovery::{NacosConfig, NacosRegistry, ServiceInstance, ServiceRegistry};
 use tonic::transport::Server;
 

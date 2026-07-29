@@ -34,7 +34,7 @@ async fn register_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<RegisterRequest>,
 ) -> Result<Json<ApiResponse<UserDto>>, AppError> {
-    let request = proto::auth::RegisterRequest {
+    let request = proto::auth::v1::RegisterRequest {
         email: req.email,
         password: req.password,
         nickname: req.nickname,
@@ -67,7 +67,7 @@ async fn login_handler(
         }
     }
 
-    let request = proto::auth::LoginRequest {
+    let request = proto::auth::v1::LoginRequest {
         email: req.email,
         password: req.password,
     };
@@ -101,7 +101,7 @@ async fn refresh_token_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<RefreshTokenRequest>,
 ) -> Result<Json<ApiResponse<LoginResponseDto>>, AppError> {
-    let request = proto::auth::RefreshTokenRequest {
+    let request = proto::auth::v1::RefreshTokenRequest {
         refresh_token: req.refresh_token,
     };
     let response = state
@@ -122,7 +122,7 @@ async fn get_user_handler(
     State(state): State<Arc<AppState>>,
     Path(id): Path<u64>,
 ) -> Result<Json<ApiResponse<UserDto>>, AppError> {
-    let request = proto::auth::GetUserRequest { user_id: id };
+    let request = proto::auth::v1::GetUserRequest { user_id: id };
     let response = state
         .clients
         .call_auth(|mut client| async move { client.get_user(request).await })
@@ -141,7 +141,7 @@ async fn update_password_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<UpdatePasswordRequest>,
 ) -> Result<Json<ApiResponse<UpdatePasswordResponseDto>>, AppError> {
-    let request = proto::auth::UpdatePasswordRequest {
+    let request = proto::auth::v1::UpdatePasswordRequest {
         user_id: req.user_id,
         old_password: req.old_password,
         new_password: req.new_password,

@@ -49,7 +49,7 @@ use super::money::Money;
 
 /// 支付渠道
 ///
-/// 与 proto::payment::PaymentChannel 对应。
+/// 与 proto::payment::v1::PaymentChannel 对应。
 /// 新增渠道只需添加变体，不影响现有逻辑。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PaymentChannel {
@@ -101,7 +101,7 @@ impl std::fmt::Display for PaymentChannel {
 
 /// 支付状态
 ///
-/// 与 proto::payment::PaymentStatus 对应。
+/// 与 proto::payment::v1::PaymentStatus 对应。
 /// 状态机控制合法的状态流转，非法转换返回错误。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PaymentStatus {

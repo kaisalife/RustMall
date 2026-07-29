@@ -27,7 +27,7 @@ use crate::application::{
     CallbackCommand, CreatePaymentCommand, PaymentApplicationService, RefundCommand,
 };
 
-use proto::payment::{
+use proto::payment::v1::{
     payment_service_server::PaymentService, CallbackRequest, CallbackResponse,
     CreatePaymentRequest, GetPaymentRequest, GetRefundRequest, PaymentResponse, RefundRequest,
     RefundResponse,

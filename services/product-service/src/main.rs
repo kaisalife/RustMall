@@ -8,7 +8,7 @@ use std::sync::Arc;
 use common::{init_tracing, load_config, SnowflakeIdGenerator};
 use infrastructure::{CategoryRepositoryImpl, DatabaseConnection, ProductRepositoryImpl};
 use interface::ProductServiceImpl;
-use proto::product::product_service_server::ProductServiceServer;
+use proto::product::v1::product_service_server::ProductServiceServer;
 use service_discovery::{NacosConfig, NacosRegistry, ServiceInstance, ServiceRegistry};
 use tonic::transport::Server;
 

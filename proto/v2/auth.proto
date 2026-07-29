@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package auth.v2;
+
+// Auth Service v2 - 扩展用户 profile 管理
+service AuthService {
+    // 继承 v1 的核心 RPC（签名保持一致）
+    rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc Login(LoginRequest) returns (LoginResponse);
+    rpc RefreshToken(RefreshTokenRequest) returns (LoginResponse);
+    rpc GetUser(GetUserRequest) returns (UserResponse);
+
+    // v2 新增 RPC
+    rpc GetUserProfile(GetUserProfileRequest) returns (UserProfileResponse);
+    rpc UpdateUserAvatar(UpdateAvatarRequest) returns (UserProfileResponse);
+    rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UserProfileResponse);
+}
+
+// === v1 兼容消息（签名不变） ===
+message RegisterRequest {
+    string email = 1;
+    string password = 2;
+    string nickname = 3;
+}
+
+message RegisterResponse {
+    uint64 user_id = 1;
+    string email = 2;
+    string nickname = 3;
+    string created_at = 4;
+}
+
+message LoginRequest {
+    string email = 1;
+    string password = 2;
+}
+
+message LoginResponse {
+    uint64 user_id = 1;
+    string email = 2;
+    string token = 3;
+    string refresh_token = 4;
+}
+
+message RefreshTokenRequest {
+    string refresh_token = 1;
+}
+
+message GetUserRequest {
+    uint64 user_id = 1;
+}
+
+message UserResponse {
+    uint64 user_id = 1;
+    string email = 2;
+    string nickname = 3;
+    string created_at = 4;
+}
+
+// === v2 新增消息 ===
+message GetUserProfileRequest {
+    uint64 user_id = 1;
+}
+
+message UpdateAvatarRequest {
+    uint64 user_id = 1;
+    string avatar_url = 2;
+}
+
+message UpdateUserProfileRequest {
+    uint64 user_id = 1;
+    optional string nickname = 2;
+    optional string avatar_url = 3;
+    optional string bio = 4;
+}
+
+message UserProfileResponse {
+    uint64 user_id = 1;
+    string email = 2;
+    string nickname = 3;
+    string avatar_url = 4;
+    string bio = 5;
+    bool mfa_enabled = 6;
+    string created_at = 7;
+}

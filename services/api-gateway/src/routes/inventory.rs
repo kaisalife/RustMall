@@ -34,7 +34,7 @@ async fn get_inventory_handler(
         }
     }
 
-    let request = proto::inventory::GetStockRequest { product_id };
+    let request = proto::inventory::v1::GetStockRequest { product_id };
     let response = state
         .clients
         .call_inventory(|mut client| async move { client.get_stock(request).await })
@@ -66,7 +66,7 @@ async fn deduct_inventory_handler(
     Path(product_id): Path<u64>,
     Json(req): Json<DeductStockRequest>,
 ) -> Result<Json<ApiResponse<DeductStockResponseDto>>, AppError> {
-    let request = proto::inventory::DeductStockRequest {
+    let request = proto::inventory::v1::DeductStockRequest {
         product_id,
         quantity: req.quantity,
     };
@@ -98,7 +98,7 @@ async fn add_inventory_handler(
     Path(product_id): Path<u64>,
     Json(req): Json<AddStockRequest>,
 ) -> Result<Json<ApiResponse<AddStockResponseDto>>, AppError> {
-    let request = proto::inventory::AddStockRequest {
+    let request = proto::inventory::v1::AddStockRequest {
         product_id,
         quantity: req.quantity,
     };

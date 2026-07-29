@@ -2,7 +2,7 @@ use tonic::{Request, Response, Status};
 
 use crate::application::{command::*, ProductApplicationService};
 
-use proto::product::{
+use proto::product::v1::{
     product_service_server::ProductService, CategoryResponse, CreateCategoryRequest,
     CreateProductRequest, DeleteProductRequest, GetProductRequest, ListCategoriesRequest,
     ListCategoriesResponse, ListProductsRequest, ListProductsResponse, ProductResponse,
@@ -113,7 +113,7 @@ impl ProductService for ProductServiceImpl {
     async fn delete_product(
         &self,
         request: Request<DeleteProductRequest>,
-    ) -> Result<Response<proto::product::DeleteProductResponse>, Status> {
+    ) -> Result<Response<proto::product::v1::DeleteProductResponse>, Status> {
         let req = request.into_inner();
 
         let success = self
@@ -122,7 +122,7 @@ impl ProductService for ProductServiceImpl {
             .await
             .map_err(app_error_to_status)?;
 
-        Ok(Response::new(proto::product::DeleteProductResponse {
+        Ok(Response::new(proto::product::v1::DeleteProductResponse {
             success,
         }))
     }

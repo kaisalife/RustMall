@@ -42,22 +42,22 @@ pub async fn health_check_handler(State(state): State<Arc<AppState>>) -> impl In
     let (auth_ok, product_ok, order_ok, inventory_ok) = tokio::join!(
         check_grpc(state.clients.call_auth(|mut client| async move {
             client
-                .get_user(proto::auth::GetUserRequest { user_id: 0 })
+                .get_user(proto::auth::v1::GetUserRequest { user_id: 0 })
                 .await
         })),
         check_grpc(state.clients.call_product(|mut client| async move {
             client
-                .get_product(proto::product::GetProductRequest { product_id: 0 })
+                .get_product(proto::product::v1::GetProductRequest { product_id: 0 })
                 .await
         })),
         check_grpc(state.clients.call_order(|mut client| async move {
             client
-                .get_order(proto::order::GetOrderRequest { order_id: 0 })
+                .get_order(proto::order::v1::GetOrderRequest { order_id: 0 })
                 .await
         })),
         check_grpc(state.clients.call_inventory(|mut client| async move {
             client
-                .get_stock(proto::inventory::GetStockRequest { product_id: 0 })
+                .get_stock(proto::inventory::v1::GetStockRequest { product_id: 0 })
                 .await
         })),
     );

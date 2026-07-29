@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package email;
+package email.v1;
 
 service EmailService {
     rpc SendVerificationEmail(SendVerificationEmailRequest) returns (SendEmailResponse);

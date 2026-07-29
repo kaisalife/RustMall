@@ -8,7 +8,7 @@ use crate::application::EmailApplicationService;
 use crate::domain::{EmailStatus, EmailType};
 use tonic::{Request, Response, Status};
 
-use proto::email::{
+use proto::email::v1::{
     email_service_server::EmailService, GetEmailStatusRequest, GetEmailStatusResponse,
     SendCustomEmailRequest, SendEmailResponse, SendOrderNotificationRequest,
     SendPasswordResetEmailRequest, SendVerificationEmailRequest,

@@ -6,7 +6,7 @@ mod interface;
 use common::{init_tracing, load_config, SnowflakeIdGenerator};
 use infrastructure::{DatabaseConnection, OrderRepositoryImpl};
 use interface::OrderServiceImpl;
-use proto::order::order_service_server::OrderServiceServer;
+use proto::order::v1::order_service_server::OrderServiceServer;
 use service_discovery::{NacosConfig, NacosRegistry, ServiceInstance, ServiceRegistry};
 use std::sync::Arc;
 use tonic::transport::Server;
