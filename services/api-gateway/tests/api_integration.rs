@@ -144,12 +144,13 @@ fn build_test_app(state: Arc<AppState>) -> Router {
     let strict_limiter = Arc::new(create_default_rate_limiter());
 
     // 公共路由（无需认证）
-    let public_routes = Router::new()
-        .nest("/api/v1/auth", auth_routes())
-        .layer(middleware::from_fn(create_rate_limit_middleware(
-            strict_limiter,
-            std::sync::Arc::new(vec![]),
-        )));
+    let public_routes =
+        Router::new()
+            .nest("/api/v1/auth", auth_routes())
+            .layer(middleware::from_fn(create_rate_limit_middleware(
+                strict_limiter,
+                std::sync::Arc::new(vec![]),
+            )));
 
     // 受保护路由（需要认证）
     let protected_routes = Router::new()
