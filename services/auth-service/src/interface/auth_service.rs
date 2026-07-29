@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
 
-use crate::application::{AuthApplicationService, command::*};
+use crate::application::{command::*, AuthApplicationService};
 
 use proto::auth::{
     auth_service_server::AuthService, GetUserRequest, LoginRequest, LoginResponse,
@@ -45,7 +45,11 @@ impl AuthService for AuthServiceImpl {
             nickname: req.nickname,
         };
 
-        let result = self.service.register(command).await.map_err(app_error_to_status)?;
+        let result = self
+            .service
+            .register(command)
+            .await
+            .map_err(app_error_to_status)?;
 
         Ok(Response::new(RegisterResponse {
             user_id: result.user_id,
@@ -66,7 +70,11 @@ impl AuthService for AuthServiceImpl {
             password: req.password,
         };
 
-        let result = self.service.login(command).await.map_err(app_error_to_status)?;
+        let result = self
+            .service
+            .login(command)
+            .await
+            .map_err(app_error_to_status)?;
 
         Ok(Response::new(LoginResponse {
             user_id: result.user_id,
@@ -102,7 +110,11 @@ impl AuthService for AuthServiceImpl {
     ) -> Result<Response<UserResponse>, Status> {
         let req = request.into_inner();
 
-        let result = self.service.get_user(req.user_id).await.map_err(app_error_to_status)?;
+        let result = self
+            .service
+            .get_user(req.user_id)
+            .await
+            .map_err(app_error_to_status)?;
 
         Ok(Response::new(UserResponse {
             user_id: result.user_id,
@@ -124,7 +136,11 @@ impl AuthService for AuthServiceImpl {
             new_password: req.new_password,
         };
 
-        let success = self.service.update_password(command).await.map_err(app_error_to_status)?;
+        let success = self
+            .service
+            .update_password(command)
+            .await
+            .map_err(app_error_to_status)?;
 
         Ok(Response::new(UpdatePasswordResponse { success }))
     }

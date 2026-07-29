@@ -1,4 +1,4 @@
-use common::{AppResult, DatabaseConfig, create_pool};
+use common::{create_pool, AppResult, DatabaseConfig};
 
 #[derive(Clone)]
 pub struct DatabaseConnection {

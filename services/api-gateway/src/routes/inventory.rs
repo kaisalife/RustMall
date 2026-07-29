@@ -48,7 +48,10 @@ async fn get_inventory_handler(
 
     // 写入缓存（TTL 5s，库存变化频繁）
     if let Some(ref cache) = state.cache {
-        if let Err(e) = cache.set_json(&cache_key, &dto, Duration::from_secs(5)).await {
+        if let Err(e) = cache
+            .set_json(&cache_key, &dto, Duration::from_secs(5))
+            .await
+        {
             tracing::warn!("Failed to write inventory {} to cache: {}", product_id, e);
         }
     }
@@ -72,7 +75,11 @@ async fn deduct_inventory_handler(
     // 扣减后失效缓存
     if let Some(ref cache) = state.cache {
         if let Err(e) = cache.delete(&format!("inventory:{}", product_id)).await {
-            tracing::warn!("Failed to invalidate cache for inventory {}: {}", product_id, e);
+            tracing::warn!(
+                "Failed to invalidate cache for inventory {}: {}",
+                product_id,
+                e
+            );
         }
     }
 
@@ -98,7 +105,11 @@ async fn add_inventory_handler(
     // 添加后失效缓存
     if let Some(ref cache) = state.cache {
         if let Err(e) = cache.delete(&format!("inventory:{}", product_id)).await {
-            tracing::warn!("Failed to invalidate cache for inventory {}: {}", product_id, e);
+            tracing::warn!(
+                "Failed to invalidate cache for inventory {}: {}",
+                product_id,
+                e
+            );
         }
     }
 

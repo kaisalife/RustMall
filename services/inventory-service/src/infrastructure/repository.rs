@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 
 use crate::domain::{Inventory, InventoryRepository};
-use common::{AppResult, AppError};
+use common::{AppError, AppResult};
 
 #[derive(Clone)]
 pub struct InventoryRepositoryImpl {
@@ -119,7 +119,9 @@ impl InventoryRepository for InventoryRepositoryImpl {
         .bind(quantity)
         .fetch_optional(&self.pool)
         .await?
-        .ok_or_else(|| AppError::invalid_input("Insufficient available stock or product not found"))?;
+        .ok_or_else(|| {
+            AppError::invalid_input("Insufficient available stock or product not found")
+        })?;
 
         Ok(record.into_domain())
     }

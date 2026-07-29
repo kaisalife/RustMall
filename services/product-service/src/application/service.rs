@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use common::{AppResult, AppError, SnowflakeIdGenerator};
+use common::{AppError, AppResult, SnowflakeIdGenerator};
 
-use crate::domain::{Product, Category, ProductRepository, CategoryRepository};
+use crate::domain::{Category, CategoryRepository, Product, ProductRepository};
 
-use super::command::{CreateProductCommand, UpdateProductCommand, ListProductsQuery};
-use super::dto::{ProductDto, ProductListDto, CategoryDto};
+use super::command::{CreateProductCommand, ListProductsQuery, UpdateProductCommand};
+use super::dto::{CategoryDto, ProductDto, ProductListDto};
 
 #[derive(Clone)]
 pub struct ProductApplicationService {
@@ -29,7 +29,12 @@ impl ProductApplicationService {
 
     pub async fn create_product(&self, command: CreateProductCommand) -> AppResult<ProductDto> {
         // 验证分类是否存在
-        if self.category_repository.find_by_id(command.category_id).await?.is_none() {
+        if self
+            .category_repository
+            .find_by_id(command.category_id)
+            .await?
+            .is_none()
+        {
             return Err(AppError::not_found("Category not found"));
         }
 
@@ -44,7 +49,9 @@ impl ProductApplicationService {
         }
 
         // 生成产品ID
-        let product_id = self.id_generator.generate()
+        let product_id = self
+            .id_generator
+            .generate()
             .map_err(|e| AppError::internal(e))?;
 
         // 创建产品实体
@@ -64,14 +71,20 @@ impl ProductApplicationService {
     }
 
     pub async fn get_product(&self, product_id: u64) -> AppResult<ProductDto> {
-        let product = self.product_repository.find_by_id(product_id).await?
+        let product = self
+            .product_repository
+            .find_by_id(product_id)
+            .await?
             .ok_or_else(|| AppError::not_found("Product not found"))?;
 
         Ok(Self::product_to_dto(product))
     }
 
     pub async fn update_product(&self, command: UpdateProductCommand) -> AppResult<ProductDto> {
-        let mut product = self.product_repository.find_by_id(command.product_id).await?
+        let mut product = self
+            .product_repository
+            .find_by_id(command.product_id)
+            .await?
             .ok_or_else(|| AppError::not_found("Product not found"))?;
 
         // 更新字段
@@ -88,7 +101,12 @@ impl ProductApplicationService {
             product.update_price(price);
         }
         if let Some(category_id) = command.category_id {
-            if self.category_repository.find_by_id(category_id).await?.is_none() {
+            if self
+                .category_repository
+                .find_by_id(category_id)
+                .await?
+                .is_none()
+            {
                 return Err(AppError::not_found("Category not found"));
             }
             product.update_category(category_id);
@@ -106,17 +124,18 @@ impl ProductApplicationService {
     }
 
     pub async fn list_products(&self, query: ListProductsQuery) -> AppResult<ProductListDto> {
-        let (products, total) = self.product_repository.list(
-            query.category_id,
-            query.min_price,
-            query.max_price,
-            query.page,
-            query.page_size,
-        ).await?;
+        let (products, total) = self
+            .product_repository
+            .list(
+                query.category_id,
+                query.min_price,
+                query.max_price,
+                query.page,
+                query.page_size,
+            )
+            .await?;
 
-        let product_dtos = products.into_iter()
-            .map(Self::product_to_dto)
-            .collect();
+        let product_dtos = products.into_iter().map(Self::product_to_dto).collect();
 
         Ok(ProductListDto {
             products: product_dtos,
@@ -126,8 +145,14 @@ impl ProductApplicationService {
         })
     }
 
-    pub async fn create_category(&self, name: String, parent_id: Option<u64>) -> AppResult<CategoryDto> {
-        let category_id = self.id_generator.generate()
+    pub async fn create_category(
+        &self,
+        name: String,
+        parent_id: Option<u64>,
+    ) -> AppResult<CategoryDto> {
+        let category_id = self
+            .id_generator
+            .generate()
             .map_err(|e| AppError::internal(e))?;
 
         let category = Category::new(category_id, name, parent_id);

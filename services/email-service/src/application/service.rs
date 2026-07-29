@@ -1,15 +1,13 @@
 //! 邮件应用服务
 
-use std::sync::Arc;
-use common::{AppResult, SnowflakeIdGenerator};
 use crate::domain::{Email, EmailRepository};
 use crate::infrastructure::EmailSender;
+use common::{AppResult, SnowflakeIdGenerator};
+use std::sync::Arc;
 
 use super::command::{
+    SendCustomEmailCommand, SendOrderNotificationCommand, SendPasswordResetEmailCommand,
     SendVerificationEmailCommand,
-    SendOrderNotificationCommand,
-    SendPasswordResetEmailCommand,
-    SendCustomEmailCommand,
 };
 
 /// 邮件应用服务
@@ -43,7 +41,12 @@ impl EmailApplicationService {
         let email_id = self.id_generator.generate()?;
 
         // 创建邮件实体
-        let email = Email::new_verification(email_id, command.to_email, command.username, command.verification_code);
+        let email = Email::new_verification(
+            email_id,
+            command.to_email,
+            command.username,
+            command.verification_code,
+        );
 
         // 保存邮件记录
         let mut email = self.email_repository.save(email).await?;
@@ -69,7 +72,14 @@ impl EmailApplicationService {
         command: SendOrderNotificationCommand,
     ) -> AppResult<String> {
         let email_id = self.id_generator.generate()?;
-        let email = Email::new_order_notification(email_id, command.to_email, command.username, command.order_id, command.total_amount, command.status);
+        let email = Email::new_order_notification(
+            email_id,
+            command.to_email,
+            command.username,
+            command.order_id,
+            command.total_amount,
+            command.status,
+        );
         let mut email = self.email_repository.save(email).await?;
 
         match self.email_sender.send(&email).await {
@@ -92,7 +102,12 @@ impl EmailApplicationService {
         command: SendPasswordResetEmailCommand,
     ) -> AppResult<String> {
         let email_id = self.id_generator.generate()?;
-        let email = Email::new_password_reset(email_id, command.to_email, command.username, command.reset_token);
+        let email = Email::new_password_reset(
+            email_id,
+            command.to_email,
+            command.username,
+            command.reset_token,
+        );
         let mut email = self.email_repository.save(email).await?;
 
         match self.email_sender.send(&email).await {
@@ -110,12 +125,15 @@ impl EmailApplicationService {
     }
 
     /// 发送自定义邮件
-    pub async fn send_custom_email(
-        &self,
-        command: SendCustomEmailCommand,
-    ) -> AppResult<String> {
+    pub async fn send_custom_email(&self, command: SendCustomEmailCommand) -> AppResult<String> {
         let email_id = self.id_generator.generate()?;
-        let email = Email::new_custom(email_id, command.to_email, command.username, command.subject, command.html_content);
+        let email = Email::new_custom(
+            email_id,
+            command.to_email,
+            command.username,
+            command.subject,
+            command.html_content,
+        );
         let mut email = self.email_repository.save(email).await?;
 
         match self.email_sender.send(&email).await {

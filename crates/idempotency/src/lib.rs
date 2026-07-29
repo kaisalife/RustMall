@@ -12,8 +12,8 @@
 //!    - FAILED：允许重试
 //! 4. **TTL 过期**：记录自动过期，避免 Redis 无限膨胀
 
-pub mod manager;
 pub mod key;
+pub mod manager;
 
-pub use manager::{IdempotencyManager, IdempotencyStatus, IdempotencyRecord, AcquireResult};
 pub use key::IdempotencyKey;
+pub use manager::{AcquireResult, IdempotencyManager, IdempotencyRecord, IdempotencyStatus};

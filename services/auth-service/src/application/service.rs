@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
 use common::{
-    hash_password_async, verify_password_async, generate_jwt, generate_refresh_token, validate_refresh_token,
-    Claims, RefreshClaims,
-    SnowflakeIdGenerator, AppResult, AppError, JwtConfig,
+    generate_jwt, generate_refresh_token, hash_password_async, validate_refresh_token,
+    verify_password_async, AppError, AppResult, Claims, JwtConfig, RefreshClaims,
+    SnowflakeIdGenerator,
 };
 
 use crate::domain::{User, UserRepository};
 use crate::infrastructure::EmailServiceClientWrapper;
 
-use super::command::{RegisterCommand, LoginCommand, UpdatePasswordCommand};
-use super::dto::{UserDto, LoginResponseDto, RegisterResponseDto};
+use super::command::{LoginCommand, RegisterCommand, UpdatePasswordCommand};
+use super::dto::{LoginResponseDto, RegisterResponseDto, UserDto};
 
 #[derive(Clone)]
 pub struct AuthApplicationService {
@@ -52,7 +52,8 @@ impl AuthApplicationService {
         }
 
         // 生成密码哈希（bcrypt 是 CPU 密集型，放到阻塞线程池执行）
-        let password_hash = hash_password_async(command.password.clone(), self.jwt_config.bcrypt_cost).await?;
+        let password_hash =
+            hash_password_async(command.password.clone(), self.jwt_config.bcrypt_cost).await?;
 
         // 生成用户ID
         let user_id = self
@@ -114,6 +115,7 @@ impl AuthApplicationService {
             user.id,
             user.email.clone(),
             self.jwt_config.expiration_hours,
+            "user".to_string(),
         );
         let token = generate_jwt(&access_claims, &self.jwt_config.secret)?;
 
@@ -146,6 +148,7 @@ impl AuthApplicationService {
             refresh_claims.user_id,
             refresh_claims.sub.clone(),
             self.jwt_config.expiration_hours,
+            "user".to_string(),
         );
         let access_token = generate_jwt(&access_claims, &self.jwt_config.secret)?;
 
@@ -184,7 +187,8 @@ impl AuthApplicationService {
             .map_err(|e| AppError::invalid_input(e.message))?;
 
         // 生成新密码哈希（bcrypt 是 CPU 密集型，放到阻塞线程池执行）
-        let new_password_hash = hash_password_async(command.new_password.clone(), self.jwt_config.bcrypt_cost).await?;
+        let new_password_hash =
+            hash_password_async(command.new_password.clone(), self.jwt_config.bcrypt_cost).await?;
 
         // 更新密码
         user.update_password(new_password_hash);

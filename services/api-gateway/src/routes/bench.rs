@@ -29,9 +29,7 @@ pub async fn ping_handler() -> impl IntoResponse {
 /// GET /bench/echo/:id - 带路径参数
 ///
 /// 用于测量路径解析开销。
-pub async fn echo_handler(
-    axum::extract::Path(id): axum::extract::Path<u64>,
-) -> impl IntoResponse {
+pub async fn echo_handler(axum::extract::Path(id): axum::extract::Path<u64>) -> impl IntoResponse {
     Json(BenchResponse {
         message: format!("echo: {}", id),
         timestamp: chrono::Utc::now().timestamp_millis(),

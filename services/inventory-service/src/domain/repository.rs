@@ -1,5 +1,5 @@
-use common::AppResult;
 use super::Inventory;
+use common::AppResult;
 
 #[async_trait::async_trait]
 pub trait InventoryRepository: Send + Sync + 'static {

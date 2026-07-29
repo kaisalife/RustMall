@@ -1,12 +1,11 @@
 use tonic::{Request, Response, Status};
 
-use crate::application::{ProductApplicationService, command::*};
+use crate::application::{command::*, ProductApplicationService};
 
 use proto::product::{
-    product_service_server::ProductService,
-    CreateProductRequest, ProductResponse,
-    GetProductRequest, UpdateProductRequest, DeleteProductRequest,
-    ListProductsRequest, ListProductsResponse,
+    product_service_server::ProductService, CreateProductRequest, DeleteProductRequest,
+    GetProductRequest, ListProductsRequest, ListProductsResponse, ProductResponse,
+    UpdateProductRequest,
 };
 
 #[derive(Clone)]
@@ -36,7 +35,11 @@ impl ProductService for ProductServiceImpl {
             stock: req.stock,
         };
 
-        let result = self.service.create_product(command).await.map_err(app_error_to_status)?;
+        let result = self
+            .service
+            .create_product(command)
+            .await
+            .map_err(app_error_to_status)?;
 
         Ok(Response::new(ProductResponse {
             product_id: result.product_id,
@@ -55,7 +58,11 @@ impl ProductService for ProductServiceImpl {
     ) -> Result<Response<ProductResponse>, Status> {
         let req = request.into_inner();
 
-        let result = self.service.get_product(req.product_id).await.map_err(app_error_to_status)?;
+        let result = self
+            .service
+            .get_product(req.product_id)
+            .await
+            .map_err(app_error_to_status)?;
 
         Ok(Response::new(ProductResponse {
             product_id: result.product_id,
@@ -82,7 +89,11 @@ impl ProductService for ProductServiceImpl {
             category_id: req.category_id,
         };
 
-        let result = self.service.update_product(command).await.map_err(app_error_to_status)?;
+        let result = self
+            .service
+            .update_product(command)
+            .await
+            .map_err(app_error_to_status)?;
 
         Ok(Response::new(ProductResponse {
             product_id: result.product_id,
@@ -101,9 +112,15 @@ impl ProductService for ProductServiceImpl {
     ) -> Result<Response<proto::product::DeleteProductResponse>, Status> {
         let req = request.into_inner();
 
-        let success = self.service.delete_product(req.product_id).await.map_err(app_error_to_status)?;
+        let success = self
+            .service
+            .delete_product(req.product_id)
+            .await
+            .map_err(app_error_to_status)?;
 
-        Ok(Response::new(proto::product::DeleteProductResponse { success }))
+        Ok(Response::new(proto::product::DeleteProductResponse {
+            success,
+        }))
     }
 
     async fn list_products(
@@ -120,9 +137,14 @@ impl ProductService for ProductServiceImpl {
             page_size: req.page_size,
         };
 
-        let result = self.service.list_products(query).await.map_err(app_error_to_status)?;
+        let result = self
+            .service
+            .list_products(query)
+            .await
+            .map_err(app_error_to_status)?;
 
-        let products = result.products
+        let products = result
+            .products
             .into_iter()
             .map(|p| ProductResponse {
                 product_id: p.product_id,

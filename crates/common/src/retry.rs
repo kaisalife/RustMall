@@ -1,5 +1,5 @@
+use crate::{AppError, AppResult};
 use std::time::Duration;
-use crate::{AppResult, AppError};
 
 /// 对异步操作执行指数退避重试
 ///
@@ -67,17 +67,13 @@ mod tests {
     async fn test_retry_succeeds_first_try() {
         let counter = Arc::new(AtomicU32::new(0));
 
-        let result: AppResult<u32> = retry_with_backoff(
-            3,
-            Duration::from_millis(1),
-            || {
-                let c = counter.clone();
-                async move {
-                    c.fetch_add(1, Ordering::SeqCst);
-                    Ok(42u32)
-                }
-            },
-        )
+        let result: AppResult<u32> = retry_with_backoff(3, Duration::from_millis(1), || {
+            let c = counter.clone();
+            async move {
+                c.fetch_add(1, Ordering::SeqCst);
+                Ok(42u32)
+            }
+        })
         .await;
 
         assert!(result.is_ok());
@@ -89,26 +85,20 @@ mod tests {
     async fn test_retry_succeeds_after_retry() {
         let counter = Arc::new(AtomicU32::new(0));
 
-        let result: AppResult<u32> = retry_with_backoff(
-            3,
-            Duration::from_millis(1),
-            || {
-                let c = counter.clone();
-                async move {
-                    let n = c.fetch_add(1, Ordering::SeqCst);
-                    if n == 0 {
-                        Err(AppError::Database(sqlx::Error::Io(
-                            std::io::Error::new(
-                                std::io::ErrorKind::ConnectionRefused,
-                                "connection refused",
-                            ),
-                        )))
-                    } else {
-                        Ok(42u32)
-                    }
+        let result: AppResult<u32> = retry_with_backoff(3, Duration::from_millis(1), || {
+            let c = counter.clone();
+            async move {
+                let n = c.fetch_add(1, Ordering::SeqCst);
+                if n == 0 {
+                    Err(AppError::Database(sqlx::Error::Io(std::io::Error::new(
+                        std::io::ErrorKind::ConnectionRefused,
+                        "connection refused",
+                    ))))
+                } else {
+                    Ok(42u32)
                 }
-            },
-        )
+            }
+        })
         .await;
 
         assert!(result.is_ok());
@@ -120,22 +110,16 @@ mod tests {
     async fn test_retry_exhausted() {
         let counter = Arc::new(AtomicU32::new(0));
 
-        let result: AppResult<u32> = retry_with_backoff(
-            2,
-            Duration::from_millis(1),
-            || {
-                let c = counter.clone();
-                async move {
-                    c.fetch_add(1, Ordering::SeqCst);
-                    Err(AppError::Database(sqlx::Error::Io(
-                        std::io::Error::new(
-                            std::io::ErrorKind::ConnectionRefused,
-                            "connection refused",
-                        ),
-                    )))
-                }
-            },
-        )
+        let result: AppResult<u32> = retry_with_backoff(2, Duration::from_millis(1), || {
+            let c = counter.clone();
+            async move {
+                c.fetch_add(1, Ordering::SeqCst);
+                Err(AppError::Database(sqlx::Error::Io(std::io::Error::new(
+                    std::io::ErrorKind::ConnectionRefused,
+                    "connection refused",
+                ))))
+            }
+        })
         .await;
 
         assert!(result.is_err());
@@ -147,17 +131,13 @@ mod tests {
     async fn test_retry_non_database_error_not_retried() {
         let counter = Arc::new(AtomicU32::new(0));
 
-        let result: AppResult<u32> = retry_with_backoff(
-            3,
-            Duration::from_millis(1),
-            || {
-                let c = counter.clone();
-                async move {
-                    c.fetch_add(1, Ordering::SeqCst);
-                    Err(AppError::internal("non-retryable error"))
-                }
-            },
-        )
+        let result: AppResult<u32> = retry_with_backoff(3, Duration::from_millis(1), || {
+            let c = counter.clone();
+            async move {
+                c.fetch_add(1, Ordering::SeqCst);
+                Err(AppError::internal("non-retryable error"))
+            }
+        })
         .await;
 
         assert!(result.is_err());

@@ -1,5 +1,5 @@
+use common::{create_pool, AppResult, DatabaseConfig};
 use sqlx::PgPool;
-use common::{AppResult, DatabaseConfig, create_pool};
 
 #[derive(Clone)]
 pub struct DatabaseConnection {

@@ -1,0 +1,46 @@
+# Grafana 数据源自动配置
+# 通过 provisioning 机制自动加载数据源，无需手动在 UI 中配置
+
+apiVersion: 1
+
+datasources:
+  # Loki - 日志查询
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
+    editable: false
+
+  # Prometheus - 指标查询
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true           # 设为默认数据源
+    editable: false
+
+  # Tempo - 分布式追踪查询（查询端口为 3200）
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: false
+    jsonData:
+      tracesToLogs:
+        datasourceUid: loki   # 关联 Loki 日志，支持从 Trace 跳转到日志
+
+  # PostgreSQL - 审计日志查询（仅查询 audit_logs 表）
+  - name: PostgreSQL-AuditLogs
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: simple_trade
+    user: postgres
+    secureJsonData:
+      password: postgres
+    jsonData:
+      sslmode: disable        # 不使用 SSL（内网通信）
+      postgresVersion: 1500   # PostgreSQL 15（对应 postgres:15-alpine）
+      timescaledb: false      # 未使用 TimescaleDB
+    editable: false

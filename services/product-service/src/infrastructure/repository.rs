@@ -1,7 +1,7 @@
-use sqlx::{PgPool, FromRow, query_as, query, query_scalar};
+use sqlx::{query, query_as, query_scalar, FromRow, PgPool};
 
-use crate::domain::{Product, Category, ProductRepository, CategoryRepository};
-use common::{AppResult, AppError};
+use crate::domain::{Category, CategoryRepository, Product, ProductRepository};
+use common::{AppError, AppResult};
 
 #[derive(Clone)]
 pub struct ProductRepositoryImpl {
@@ -129,7 +129,11 @@ impl ProductRepository for ProductRepositoryImpl {
             param_idx += 1;
         }
 
-        sql.push_str(&format!(" ORDER BY id LIMIT ${} OFFSET ${}", param_idx, param_idx + 1));
+        sql.push_str(&format!(
+            " ORDER BY id LIMIT ${} OFFSET ${}",
+            param_idx,
+            param_idx + 1
+        ));
 
         // 执行计数查询
         let mut count_query = query_scalar::<_, i64>(&count_sql);
@@ -152,7 +156,10 @@ impl ProductRepository for ProductRepositoryImpl {
 
         let records = product_query.fetch_all(&self.pool).await?;
 
-        Ok((records.into_iter().map(|r| r.into_domain()).collect(), total))
+        Ok((
+            records.into_iter().map(|r| r.into_domain()).collect(),
+            total,
+        ))
     }
 }
 

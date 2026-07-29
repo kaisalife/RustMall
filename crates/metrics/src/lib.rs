@@ -1,5 +1,5 @@
-pub mod middleware;
 pub mod handler;
+pub mod middleware;
 
-pub use middleware::MetricsMiddleware;
 pub use handler::metrics_handler;
+pub use middleware::MetricsMiddleware;

@@ -6,12 +6,10 @@
 //! 生产环境应替换为真实的渠道适配器（如 `WeChatPayAdapter` / `AlipayAdapter`），
 //! 通过 `PaymentRouter` 的渠道路由注入。
 
+use super::{ChannelPayResult, ChannelQueryResult, ChannelRefundResult, PaymentChannelAdapter};
+use crate::domain::{Money, PaymentChannel};
 use async_trait::async_trait;
 use common::AppResult;
-use crate::domain::{Money, PaymentChannel};
-use super::{
-    ChannelPayResult, ChannelQueryResult, ChannelRefundResult, PaymentChannelAdapter,
-};
 
 /// 支付渠道测试桩。
 ///

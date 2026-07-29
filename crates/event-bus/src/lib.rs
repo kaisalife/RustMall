@@ -27,10 +27,10 @@
 //! }
 //! ```
 
+pub mod consumer;
 pub mod event;
 pub mod producer;
-pub mod consumer;
 
-pub use event::{EventPayload, EventType, OrderItemEvent, EventEnvelope};
-pub use producer::EventBusProducer;
 pub use consumer::EventBusConsumer;
+pub use event::{EventEnvelope, EventPayload, EventType, OrderItemEvent};
+pub use producer::EventBusProducer;

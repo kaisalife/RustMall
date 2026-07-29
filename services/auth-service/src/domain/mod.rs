@@ -1,5 +1,5 @@
-pub mod user;
 pub mod repository;
+pub mod user;
 
-pub use user::User;
 pub use repository::UserRepository;
+pub use user::User;

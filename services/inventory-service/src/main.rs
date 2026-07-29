@@ -1,11 +1,11 @@
+mod application;
 mod domain;
 mod infrastructure;
-mod application;
 mod interface;
 
 use std::sync::Arc;
 
-use common::{load_config, init_tracing};
+use common::{init_tracing, load_config};
 use infrastructure::{DatabaseConnection, InventoryRepositoryImpl};
 use interface::InventoryServiceImpl;
 use proto::inventory::inventory_service_server::InventoryServiceServer;
@@ -23,7 +23,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "inventory_service=debug,tonic=info",
     );
 
-    let addr = format!("{}:{}", config.inventory_service.host, config.inventory_service.port).parse()?;
+    let addr = format!(
+        "{}:{}",
+        config.inventory_service.host, config.inventory_service.port
+    )
+    .parse()?;
 
     tracing::info!("Inventory Service starting on {}", addr);
 
@@ -55,8 +59,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         match result {
                             Ok(msg) => {
                                 if let Ok(envelope) = event_bus::consumer::parse_event(&msg) {
-                                    if let event_bus::EventPayload::OrderCreated { order_id, items, .. } = envelope.payload {
-                                        tracing::info!(order_id, items = items.len(), "Processing OrderCreated event");
+                                    if let event_bus::EventPayload::OrderCreated {
+                                        order_id,
+                                        items,
+                                        ..
+                                    } = envelope.payload
+                                    {
+                                        tracing::info!(
+                                            order_id,
+                                            items = items.len(),
+                                            "Processing OrderCreated event"
+                                        );
                                         for item in items {
                                             use application::command::DeductStockCommand;
                                             let cmd = DeductStockCommand {
@@ -67,7 +80,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                 tracing::error!(
                                                     order_id,
                                                     product_id = item.product_id,
-                                                    "Failed to deduct stock: {}", e
+                                                    "Failed to deduct stock: {}",
+                                                    e
                                                 );
                                             }
                                         }
@@ -83,7 +97,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Err(e) => {
-            tracing::warn!("Failed to init Kafka consumer, stock deduction will not work: {}", e);
+            tracing::warn!(
+                "Failed to init Kafka consumer, stock deduction will not work: {}",
+                e
+            );
         }
     }
 

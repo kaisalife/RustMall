@@ -1,12 +1,12 @@
 //! 邮件发送实现
 
-use lettre::{
-    transport::smtp::authentication::Credentials,
-    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
-};
-use tracing::{info, error};
-use common::AppResult;
 use crate::domain::Email;
+use common::AppResult;
+use lettre::{
+    transport::smtp::authentication::Credentials, AsyncSmtpTransport, AsyncTransport, Message,
+    Tokio1Executor,
+};
+use tracing::{error, info};
 
 /// 邮件发送器
 #[derive(Clone)]
@@ -59,18 +59,25 @@ impl EmailSender {
                 info!("  收件人：{}", email.to_email);
                 info!("  主题：{}", email.subject);
                 info!("  内容长度：{} 字符", email.html_content.len());
-                
+
                 let message_id = format!("dev-msg-{}-{}", email.id, uuid::Uuid::new_v4());
                 info!("  模拟 Message-ID：{}", message_id);
-                
+
                 return Ok(message_id);
             }
         };
 
         // 构建邮件
         let message = Message::builder()
-            .from(self.from_address.parse().map_err(|e| common::AppError::Internal(format!("发件人地址错误：{}", e)))?)
-            .to(email.to_email.parse().map_err(|e| common::AppError::Internal(format!("收件人地址错误：{}", e)))?)
+            .from(
+                self.from_address
+                    .parse()
+                    .map_err(|e| common::AppError::Internal(format!("发件人地址错误：{}", e)))?,
+            )
+            .to(email
+                .to_email
+                .parse()
+                .map_err(|e| common::AppError::Internal(format!("收件人地址错误：{}", e)))?)
             .subject(&email.subject)
             .header(lettre::message::header::ContentType::TEXT_HTML)
             .body(email.html_content.clone())

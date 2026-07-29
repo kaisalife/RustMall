@@ -1,11 +1,11 @@
-use tonic::transport::{Channel, Endpoint};
-use std::time::Duration;
 use common::AppResult;
+use std::time::Duration;
+use tonic::transport::{Channel, Endpoint};
 
 use proto::auth::auth_service_client::AuthServiceClient;
-use proto::product::product_service_client::ProductServiceClient;
-use proto::order::order_service_client::OrderServiceClient;
 use proto::inventory::inventory_service_client::InventoryServiceClient;
+use proto::order::order_service_client::OrderServiceClient;
+use proto::product::product_service_client::ProductServiceClient;
 
 #[derive(Clone)]
 pub struct GrpcClients {
@@ -40,7 +40,8 @@ async fn create_channel(addr: &str, timeout: Duration) -> AppResult<Channel> {
         }
     }
     Err(common::AppError::grpc(format!(
-        "Connection failed after 10 retries: {:?}", last_err
+        "Connection failed after 10 retries: {:?}",
+        last_err
     )))
 }
 

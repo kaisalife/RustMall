@@ -7,33 +7,20 @@
 //! - CORS 配置
 //! - 幂等性中间件（Redis 分布式锁）
 
-pub mod auth;
-pub mod rate_limit;
-pub mod logger;
-pub mod idempotency;
 pub mod audit;
+pub mod auth;
+pub mod idempotency;
+pub mod logger;
+pub mod rate_limit;
 
-pub use auth::{
-    create_auth_middleware,
-    create_optional_auth_middleware,
-    get_user_claims,
-    JwtValidator,
-    AuthError,
-};
-pub use rate_limit::{
-    RateLimiter,
-    create_rate_limit_middleware,
-    create_default_rate_limiter,
-    create_strict_rate_limiter,
-    RateLimitError,
-};
-pub use logger::{
-    logger_middleware,
-    verbose_logger_middleware,
-    create_cors_layer,
-};
-pub use idempotency::{
-    idempotency_middleware,
-    IDEMPOTENCY_HEADER,
-};
 pub use audit::{AuditLayer, AuditMiddleware};
+pub use auth::{
+    create_auth_middleware, create_optional_auth_middleware, get_user_claims, AuthError,
+    JwtValidator,
+};
+pub use idempotency::{idempotency_middleware, IDEMPOTENCY_HEADER};
+pub use logger::{create_cors_layer, logger_middleware, verbose_logger_middleware};
+pub use rate_limit::{
+    create_default_rate_limiter, create_rate_limit_middleware, create_strict_rate_limiter,
+    RateLimitError, RateLimiter,
+};

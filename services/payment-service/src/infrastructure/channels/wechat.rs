@@ -11,12 +11,10 @@
 //! 金额单位：微信支付金额以「分」为单位（整数），需将 `Decimal` 元转换为分。
 //! 签名算法：MD5（旧版）或 HMAC-SHA256，按 key 字典序拼接后加盐。
 
+use super::{ChannelPayResult, ChannelQueryResult, ChannelRefundResult, PaymentChannelAdapter};
+use crate::domain::{Money, PaymentChannel};
 use async_trait::async_trait;
 use common::AppResult;
-use crate::domain::{Money, PaymentChannel};
-use super::{
-    ChannelPayResult, ChannelQueryResult, ChannelRefundResult, PaymentChannelAdapter,
-};
 
 /// 微信支付适配器。
 ///
@@ -36,7 +34,12 @@ pub struct WeChatPayAdapter {
 
 impl WeChatPayAdapter {
     pub fn new(app_id: String, mch_id: String, api_key: String, notify_url: String) -> Self {
-        Self { app_id, mch_id, api_key, notify_url }
+        Self {
+            app_id,
+            mch_id,
+            api_key,
+            notify_url,
+        }
     }
 }
 

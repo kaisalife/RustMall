@@ -317,6 +317,131 @@ services:
     networks:
       - simple_trade_network
 
+  # ============================================
+  # 可观测性栈
+  # ============================================
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: simple_trade_prometheus
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.listen-address=:9090'
+    expose:
+      - "9090"
+    depends_on:
+      - api-gateway
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: simple_trade_loki
+    volumes:
+      - ./observability/loki-config.yml:/etc/loki/local-config.yaml:ro
+    command: -config.file=/etc/loki/local-config.yaml
+    expose:
+      - "3100"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: simple_trade_promtail
+    volumes:
+      - ./observability/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  tempo:
+    image: grafana/tempo:2.4.1
+    container_name: simple_trade_tempo
+    volumes:
+      - ./observability/tempo-config.yml:/etc/tempo.yaml:ro
+    command: -config.file=/etc/tempo.yaml
+    expose:
+      - "3200"
+      - "4317"
+      - "4318"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: simple_trade_otel
+    volumes:
+      - ./observability/otel-collector-config.yml:/etc/otelcol/config.yml:ro
+    command: --config=/etc/otelcol/config.yml
+    expose:
+      - "4317"
+      - "4318"
+    depends_on:
+      - tempo
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: simple_trade_grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    expose:
+      - "3000"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
 volumes:
   postgres_data:
     driver: local

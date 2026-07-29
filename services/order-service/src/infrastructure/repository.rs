@@ -1,7 +1,7 @@
+use crate::domain::{Order, OrderItem, OrderRepository, OrderStatus};
+use common::{AppError, AppResult, SnowflakeIdGenerator};
+use sqlx::{query, query_as, query_scalar, FromRow, PgPool};
 use std::sync::Arc;
-use sqlx::{PgPool, query, query_as, query_scalar, FromRow};
-use crate::domain::{Order, OrderItem, OrderStatus, OrderRepository};
-use common::{AppResult, AppError, SnowflakeIdGenerator};
 
 #[derive(Clone)]
 pub struct OrderRepositoryImpl {
@@ -122,7 +122,12 @@ impl OrderRepository for OrderRepositoryImpl {
         Ok(order)
     }
 
-    async fn list_by_user(&self, user_id: u64, page: i32, page_size: i32) -> AppResult<(Vec<Order>, i64)> {
+    async fn list_by_user(
+        &self,
+        user_id: u64,
+        page: i32,
+        page_size: i32,
+    ) -> AppResult<(Vec<Order>, i64)> {
         let offset = (page - 1) * page_size;
 
         let records = query_as::<_, OrderRecord>(
@@ -166,7 +171,10 @@ impl OrderRepository for OrderRepositoryImpl {
         use std::collections::HashMap;
         let mut items_map: HashMap<i64, Vec<OrderItem>> = HashMap::new();
         for item in all_items {
-            items_map.entry(item.order_id).or_default().push(item.into_domain());
+            items_map
+                .entry(item.order_id)
+                .or_default()
+                .push(item.into_domain());
         }
 
         let orders = records
@@ -194,7 +202,8 @@ impl OrderRepositoryImpl {
             OrderStatus::Shipped => "SHIPPED",
             OrderStatus::Completed => "COMPLETED",
             OrderStatus::Cancelled => "CANCELLED",
-        }.to_string()
+        }
+        .to_string()
     }
 
     fn string_to_status(s: &str) -> OrderStatus {

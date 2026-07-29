@@ -73,12 +73,7 @@ pub struct Transaction {
 
 impl Transaction {
     /// 创建流水记录
-    pub fn new(
-        id: u64,
-        payment_order_id: u64,
-        txn_type: TransactionType,
-        amount: Decimal,
-    ) -> Self {
+    pub fn new(id: u64, payment_order_id: u64, txn_type: TransactionType, amount: Decimal) -> Self {
         Self {
             id,
             payment_order_id,

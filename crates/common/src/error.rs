@@ -4,9 +4,8 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde_json::json;
-use thiserror::Error;
 use sqlx;
-
+use thiserror::Error;
 
 pub type AppResult<T> = Result<T, AppError>;
 

@@ -2,8 +2,8 @@
 //!
 //! 测试 bcrypt 密码哈希和 JWT 生成/验证的性能。
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use common::{crypto, Claims};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 fn bench_password_hash(c: &mut Criterion) {
     let password = "TestPassword123";
@@ -25,14 +25,16 @@ fn bench_password_hash(c: &mut Criterion) {
 
     c.bench_function("verify_password_wrong", |b| {
         b.iter(|| {
-            black_box(crypto::verify_password(black_box("WrongPassword"), black_box(&hash)).is_err());
+            black_box(
+                crypto::verify_password(black_box("WrongPassword"), black_box(&hash)).is_err(),
+            );
         })
     });
 }
 
 fn bench_jwt(c: &mut Criterion) {
     let secret = "benchmark-secret-key";
-    let claims = Claims::new(1, "bench@example.com".to_string(), 24);
+    let claims = Claims::new(1, "bench@example.com".to_string(), 24, "user".to_string());
     let token = crypto::generate_jwt(&claims, secret).unwrap();
 
     c.bench_function("generate_jwt", |b| {

@@ -1,13 +1,13 @@
+mod application;
 mod domain;
 mod infrastructure;
-mod application;
 mod interface;
 
-use std::sync::Arc;
-use common::{load_config, init_tracing, SnowflakeIdGenerator};
+use common::{init_tracing, load_config, SnowflakeIdGenerator};
 use infrastructure::{DatabaseConnection, OrderRepositoryImpl};
 use interface::OrderServiceImpl;
 use proto::order::order_service_server::OrderServiceServer;
+use std::sync::Arc;
 use tonic::transport::Server;
 
 #[tokio::main]
@@ -20,13 +20,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "order_service=debug,tonic=info",
     );
 
-    let addr = format!("{}:{}", config.order_service.host, config.order_service.port).parse()?;
+    let addr = format!(
+        "{}:{}",
+        config.order_service.host, config.order_service.port
+    )
+    .parse()?;
 
     tracing::info!("Order Service starting on {}", addr);
 
     let db = DatabaseConnection::new(&config.database).await?;
-    let id_generator = Arc::new(SnowflakeIdGenerator::new(config.order_service.worker_id).expect("Failed to create ID generator"));
-    let order_repository = Arc::new(OrderRepositoryImpl::new(db.pool().clone(), id_generator.clone()));
+    let id_generator = Arc::new(
+        SnowflakeIdGenerator::new(config.order_service.worker_id)
+            .expect("Failed to create ID generator"),
+    );
+    let order_repository = Arc::new(OrderRepositoryImpl::new(
+        db.pool().clone(),
+        id_generator.clone(),
+    ));
 
     // 初始化 Kafka 事件生产者
     let event_producer = match event_bus::EventBusProducer::new(
@@ -40,12 +50,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Some(producer)
         }
         Err(e) => {
-            tracing::warn!("Failed to init Kafka producer, events will not be published: {}", e);
+            tracing::warn!(
+                "Failed to init Kafka producer, events will not be published: {}",
+                e
+            );
             None
         }
     };
 
-    let mut order_service = application::OrderApplicationService::new(order_repository, id_generator);
+    let mut order_service =
+        application::OrderApplicationService::new(order_repository, id_generator);
     if let Some(producer) = event_producer {
         order_service = order_service.with_event_producer(producer);
     }

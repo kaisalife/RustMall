@@ -3,7 +3,7 @@
 //! 使用 Axum 请求扩展在请求生命周期内存储 request_id。
 //! logger 中间件生成并注入，审计中间件和 handler 可读取。
 
-use axum::http::{Request, header::HeaderName, HeaderValue};
+use axum::http::{header::HeaderName, HeaderValue, Request};
 
 /// 请求扩展中存储 request_id 的 key
 pub const REQUEST_ID_HEADER: &str = "x-request-id";

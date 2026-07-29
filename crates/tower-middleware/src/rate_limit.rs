@@ -1,22 +1,14 @@
 //! 限流中间件
 
-use std::{
-    sync::Arc,
-    time::Duration,
-};
-use tokio::sync::Mutex;
-use lru::LruCache;
-use std::num::NonZeroUsize;
 use axum::{
-    http::Request,
-    middleware::Next,
-    response::Response,
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-    body::Body,
+    body::Body, http::Request, http::StatusCode, middleware::Next, response::IntoResponse,
+    response::Response, Json,
 };
+use lru::LruCache;
 use serde_json::json;
+use std::num::NonZeroUsize;
+use std::{sync::Arc, time::Duration};
+use tokio::sync::Mutex;
 
 /// 限流错误
 #[derive(Debug, thiserror::Error)]
@@ -33,8 +25,9 @@ impl IntoResponse for RateLimitError {
                 Json(json!({
                     "error": "Too many requests",
                     "message": "Please try again later"
-                }))
-            ).into_response(),
+                })),
+            )
+                .into_response(),
         }
     }
 }
@@ -60,16 +53,16 @@ struct Bucket {
 
 impl RateLimiter {
     /// 创建新的限流器
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `max_requests` - 每个窗口允许的最大请求数
     /// * `window_size` - 窗口大小
     /// * `cache_size` - LRU 缓存大小
     pub fn new(max_requests: u32, window_size: Duration, cache_size: usize) -> Self {
-        let cache_size = NonZeroUsize::new(cache_size)
-            .unwrap_or_else(|| NonZeroUsize::new(1000).unwrap());
-        
+        let cache_size =
+            NonZeroUsize::new(cache_size).unwrap_or_else(|| NonZeroUsize::new(1000).unwrap());
+
         Self {
             buckets: Arc::new(Mutex::new(LruCache::new(cache_size))),
             max_requests,
@@ -78,9 +71,9 @@ impl RateLimiter {
     }
 
     /// 检查是否允许请求
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `key` - 限流键，可以是 IP 地址或用户 ID
     pub async fn check(&self, key: &str) -> bool {
         let mut buckets = self.buckets.lock().await;
@@ -94,7 +87,7 @@ impl RateLimiter {
         // 计算需要补充的令牌数
         let elapsed = now.duration_since(bucket.last_refill);
         let windows_passed = elapsed.as_secs() / self.window_size.as_secs();
-        
+
         if windows_passed > 0 {
             bucket.tokens = self.max_requests;
             bucket.last_refill = now;
@@ -116,7 +109,18 @@ pub fn create_default_rate_limiter() -> RateLimiter {
 
 /// 限流中间件工厂函数
 /// `whitelist` 中的 IP 直接放行，不消耗令牌
-pub fn create_rate_limit_middleware(limiter: Arc<RateLimiter>, whitelist: Arc<Vec<String>>) -> impl Fn(Request<Body>, Next) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Response, RateLimitError>> + Send + 'static>> + Clone + Send + Sync + 'static {
+pub fn create_rate_limit_middleware(
+    limiter: Arc<RateLimiter>,
+    whitelist: Arc<Vec<String>>,
+) -> impl Fn(
+    Request<Body>,
+    Next,
+) -> std::pin::Pin<
+    Box<dyn std::future::Future<Output = Result<Response, RateLimitError>> + Send + 'static>,
+> + Clone
+       + Send
+       + Sync
+       + 'static {
     move |request: Request<Body>, next: Next| {
         let limiter = limiter.clone();
         let whitelist = whitelist.clone();
@@ -143,7 +147,10 @@ pub fn create_rate_limit_middleware(limiter: Arc<RateLimiter>, whitelist: Arc<Ve
 /// 优先使用 TCP 连接地址，只在受信代理场景下信任 X-Forwarded-For
 fn get_client_ip<B>(request: &Request<B>) -> String {
     // 优先从 ConnectInfo 获取真实 TCP 连接地址
-    if let Some(connect_info) = request.extensions().get::<axum::extract::ConnectInfo<std::net::SocketAddr>>() {
+    if let Some(connect_info) = request
+        .extensions()
+        .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
+    {
         return connect_info.0.ip().to_string();
     }
 

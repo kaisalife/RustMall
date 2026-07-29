@@ -401,8 +401,11 @@ mod tests {
     fn test_succeed() {
         let mut p = create_test_payment();
         p.start_processing().unwrap();
-        p.succeed("wx_txn_001".to_string(), "https://pay.weixin.qq.com".to_string())
-            .unwrap();
+        p.succeed(
+            "wx_txn_001".to_string(),
+            "https://pay.weixin.qq.com".to_string(),
+        )
+        .unwrap();
         assert_eq!(p.status, PaymentStatus::Success);
         assert_eq!(p.channel_txn_id, "wx_txn_001");
     }

@@ -1,0 +1,36 @@
+# Tempo 配置 - 分布式追踪后端
+# 参考 Tempo 2.x 标准配置
+
+server:
+  http_listen_port: 3200   # Tempo HTTP 查询端口（Grafana 数据源使用此端口）
+  grpc_listen_port: 9095   # Tempo gRPC 监听端口
+
+# OTLP 接收器配置
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317   # OTLP gRPC 接收端口
+        http:
+          endpoint: 0.0.0.0:4318   # OTLP HTTP 接收端口
+
+# 摄入器配置
+ingester:
+  trace_idle_period: 10s       # 空闲 trace 切片周期
+  max_block_bytes: 1048576     # 单个 block 最大字节数（1MB）
+  max_block_duration: 5m       # 单个 block 最大持续时间
+
+# Compactor 配置（保留 3 天）
+compactor:
+  compaction:
+    block_retention: 336h      # 追踪数据保留 3 天（336 小时）
+
+# 存储配置（filesystem）
+storage:
+  trace:
+    backend: filesystem
+    wal:
+      path: /var/tempo/wal       # WAL 日志目录
+    filesystem:
+      path: /var/tempo/traces    # 追踪数据存储目录

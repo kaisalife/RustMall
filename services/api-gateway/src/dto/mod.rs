@@ -1,4 +1,5 @@
+pub mod audit;
 pub mod auth;
-pub mod product;
-pub mod order;
 pub mod inventory;
+pub mod order;
+pub mod product;

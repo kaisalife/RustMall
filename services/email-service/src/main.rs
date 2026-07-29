@@ -1,14 +1,14 @@
 //! 邮件服务入口
 
+mod application;
 mod domain;
 mod infrastructure;
-mod application;
 mod interface;
 
-use std::sync::Arc;
-use common::{load_config, init_tracing, SnowflakeIdGenerator};
+use common::{init_tracing, load_config, SnowflakeIdGenerator};
 use interface::EmailServiceImpl;
 use proto::email::email_service_server::EmailServiceServer;
+use std::sync::Arc;
 use tonic::transport::Server;
 
 #[tokio::main]
@@ -27,7 +27,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("  Simple Trade - Email Service");
     tracing::info!("========================================");
 
-    let addr = format!("{}:{}", config.email_service.host, config.email_service.port).parse()?;
+    let addr = format!(
+        "{}:{}",
+        config.email_service.host, config.email_service.port
+    )
+    .parse()?;
 
     tracing::info!("启动 Email Service 监听：{}", addr);
 
@@ -43,7 +47,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 初始化邮件发送器
     let email_sender = if cfg!(debug_assertions) {
         tracing::info!("开发模式：使用模拟邮件发送器");
-        Arc::new(infrastructure::EmailSender::new_dev(config.email.from_address.clone()))
+        Arc::new(infrastructure::EmailSender::new_dev(
+            config.email.from_address.clone(),
+        ))
     } else {
         tracing::info!("生产模式：使用真实 SMTP 发送器");
         Arc::new(infrastructure::EmailSender::new(
@@ -56,11 +62,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // 初始化应用服务
-    let email_service = application::EmailApplicationService::new(
-        id_generator,
-        email_repository,
-        email_sender,
-    );
+    let email_service =
+        application::EmailApplicationService::new(id_generator, email_repository, email_sender);
 
     // 创建 gRPC 服务
     let email_service_impl = EmailServiceImpl::new(email_service);

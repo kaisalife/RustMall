@@ -1,4 +1,4 @@
-use sqlx::{PgPool, FromRow, query_as, query};
+use sqlx::{query, query_as, FromRow, PgPool};
 
 use crate::domain::{User, UserRepository};
 use common::AppResult;
@@ -45,7 +45,7 @@ impl UserRepository for UserRepositoryImpl {
             INSERT INTO users (id, email, password_hash, nickname, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id, email, password_hash, nickname, created_at, updated_at
-            "#
+            "#,
         )
         .bind(user.id as i64)
         .bind(&user.email)
@@ -65,7 +65,7 @@ impl UserRepository for UserRepositoryImpl {
             SELECT id, email, password_hash, nickname, created_at, updated_at
             FROM users
             WHERE id = $1
-            "#
+            "#,
         )
         .bind(id as i64)
         .fetch_optional(&self.pool)
@@ -80,7 +80,7 @@ impl UserRepository for UserRepositoryImpl {
             SELECT id, email, password_hash, nickname, created_at, updated_at
             FROM users
             WHERE email = $1
-            "#
+            "#,
         )
         .bind(email)
         .fetch_optional(&self.pool)
@@ -96,7 +96,7 @@ impl UserRepository for UserRepositoryImpl {
             SET email = $2, password_hash = $3, nickname = $4, updated_at = $5
             WHERE id = $1
             RETURNING id, email, password_hash, nickname, created_at, updated_at
-            "#
+            "#,
         )
         .bind(user.id as i64)
         .bind(&user.email)
@@ -113,7 +113,7 @@ impl UserRepository for UserRepositoryImpl {
         query(
             r#"
             DELETE FROM users WHERE id = $1
-            "#
+            "#,
         )
         .bind(id as i64)
         .execute(&self.pool)

@@ -4,7 +4,7 @@
 //! Migrations are embedded at compile time from the `./migrations` directory.
 
 use sqlx::PgPool;
-use tracing::{info, error};
+use tracing::{error, info};
 
 use common::{AppError, AppResult, DatabaseConfig};
 

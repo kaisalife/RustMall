@@ -64,7 +64,7 @@ smtp_password = "your-app-password"
 from_address = "no-reply@simple-trade.com"
 
 [tracing]
-otlp_endpoint = "http://localhost:4317"
+otlp_endpoint = "http://otel-collector:4317"
 
 [kafka]
 brokers = "kafka:9092"

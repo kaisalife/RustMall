@@ -68,7 +68,10 @@ async fn get_product_handler(
 
             // 写入缓存（TTL 5 分钟）
             if let Some(ref cache) = state.cache {
-                if let Err(e) = cache.set_json(&cache_key, &dto, Duration::from_secs(300)).await {
+                if let Err(e) = cache
+                    .set_json(&cache_key, &dto, Duration::from_secs(300))
+                    .await
+                {
                     tracing::warn!("Failed to write product {} to cache: {}", id, e);
                 }
             }
@@ -76,9 +79,7 @@ async fn get_product_handler(
             Ok(Json(ApiResponse::success(dto)))
         }
         Err(e) => match e.code() {
-            tonic::Code::NotFound => {
-                Err(AppError::not_found(format!("Product {} not found", id)))
-            }
+            tonic::Code::NotFound => Err(AppError::not_found(format!("Product {} not found", id))),
             tonic::Code::Unavailable => {
                 tracing::error!("Product service unavailable: {}", e.message());
                 // 降级：尝试从缓存返回旧数据
@@ -162,8 +163,7 @@ async fn list_products_handler(
     match client.list_products(request).await {
         Ok(resp) => {
             let resp = resp.into_inner();
-            let products: Vec<ProductDto> =
-                resp.products.into_iter().map(product_to_dto).collect();
+            let products: Vec<ProductDto> = resp.products.into_iter().map(product_to_dto).collect();
             Ok(Json(ApiResponse::success(ListProductsResponseDto {
                 products,
                 total: resp.total,

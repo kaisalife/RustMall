@@ -1,5 +1,5 @@
-pub mod repository;
 pub mod database;
+pub mod repository;
 
-pub use repository::OrderRepositoryImpl;
 pub use database::DatabaseConnection;
+pub use repository::OrderRepositoryImpl;

@@ -1,5 +1,5 @@
-pub mod service;
 pub mod command;
 pub mod dto;
+pub mod service;
 
 pub use service::InventoryApplicationService;

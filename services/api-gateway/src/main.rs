@@ -1,25 +1,24 @@
 use std::sync::Arc;
 
-use axum::{
-    middleware,
-    Router,
-};
-use common::{load_config, init_tracing, SnowflakeIdGenerator};
-use metrics::{MetricsMiddleware, metrics_handler};
+use axum::{middleware, Router};
+use common::{init_tracing, load_config, SnowflakeIdGenerator};
+use metrics::{metrics_handler, MetricsMiddleware};
 use tower_middleware::{
-    auth::create_auth_middleware,
-    rate_limit::{create_default_rate_limiter, create_rate_limit_middleware, create_strict_rate_limiter},
-    logger::logger_middleware,
     audit::AuditLayer,
+    auth::create_auth_middleware,
     create_cors_layer,
+    logger::logger_middleware,
+    rate_limit::{
+        create_default_rate_limiter, create_rate_limit_middleware, create_strict_rate_limiter,
+    },
 };
 
+use api_gateway::grpc_clients;
 use api_gateway::routes::{
-    auth_routes, user_routes, product_routes, order_routes, inventory_routes,
-    health_check_handler, ping_handler, echo_handler,
+    audit_routes, auth_routes, echo_handler, health_check_handler, inventory_routes, order_routes,
+    ping_handler, product_routes, user_routes,
 };
 use api_gateway::state::AppState;
-use api_gateway::grpc_clients;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -67,7 +66,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 初始化 Kafka 事件生产者（用于审计日志）
     let event_producer = {
-        let id_generator = Arc::new(SnowflakeIdGenerator::new(10).expect("Failed to create ID generator"));
+        let id_generator =
+            Arc::new(SnowflakeIdGenerator::new(10).expect("Failed to create ID generator"));
         match event_bus::EventBusProducer::new(
             &config.kafka.brokers,
             "api-gateway",
@@ -79,14 +79,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Some(producer)
             }
             Err(e) => {
-                tracing::warn!("Failed to init Kafka producer, audit logging disabled: {}", e);
+                tracing::warn!(
+                    "Failed to init Kafka producer, audit logging disabled: {}",
+                    e
+                );
                 None
             }
         }
     };
 
+    // 初始化数据库连接池（用于审计日志查询等直连 PostgreSQL 场景）
+    let db_pool = match common::create_pool(&config.database).await {
+        Ok(pool) => {
+            tracing::info!("Database pool connected (audit log queries enabled)");
+            Some(pool)
+        }
+        Err(e) => {
+            tracing::warn!(
+                "Database pool unavailable, audit log queries disabled: {}",
+                e
+            );
+            None
+        }
+    };
+
     // 创建应用状态
-    let app_state = Arc::new(AppState::new(config.clone(), clients, cache));
+    let app_state = Arc::new(AppState::new(config.clone(), clients, cache, db_pool));
 
     // JWT 密钥
     let jwt_secret = config.jwt.secret.clone();
@@ -98,11 +116,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let strict_limiter = Arc::new(create_strict_rate_limiter());
 
     // 公共路由（无需认证）
-    let public_routes = Router::new()
-        .nest("/api/auth", auth_routes());
+    let public_routes = Router::new().nest("/api/auth", auth_routes());
     // 对认证接口使用严格限流（防止暴力破解）
     let public_routes = if rate_limit_cfg.enabled {
-        public_routes.layer(middleware::from_fn(create_rate_limit_middleware(strict_limiter, whitelist.clone())))
+        public_routes.layer(middleware::from_fn(create_rate_limit_middleware(
+            strict_limiter,
+            whitelist.clone(),
+        )))
     } else {
         public_routes
     };
@@ -113,11 +133,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/products", product_routes())
         .nest("/api/orders", order_routes())
         .nest("/api/inventory", inventory_routes())
+        .nest("/api/audit", audit_routes())
         // JWT 认证中间件
         .layer(middleware::from_fn(create_auth_middleware(jwt_secret)));
     // 默认限流
     let protected_routes = if rate_limit_cfg.enabled {
-        protected_routes.layer(middleware::from_fn(create_rate_limit_middleware(default_limiter, whitelist.clone())))
+        protected_routes.layer(middleware::from_fn(create_rate_limit_middleware(
+            default_limiter,
+            whitelist.clone(),
+        )))
     } else {
         protected_routes
     };
@@ -147,8 +171,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+    .with_graceful_shutdown(shutdown_signal())
+    .await?;
 
     Ok(())
 }

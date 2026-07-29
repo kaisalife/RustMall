@@ -5,12 +5,12 @@
 //! - 不关心技术细节（技术细节在 infrastructure 层）
 //! - 对外暴露应用服务、命令对象、DTO 等类型，供 interface 层调用
 
-pub mod service;
 pub mod command;
 pub mod dto;
 pub mod idempotency;
 pub mod routing;
+pub mod service;
 
-pub use service::PaymentApplicationService;
 pub use command::*;
 pub use dto::*;
+pub use service::PaymentApplicationService;

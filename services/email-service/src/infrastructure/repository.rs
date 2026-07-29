@@ -1,9 +1,9 @@
 //! 邮件仓库 PostgreSQL 实现
 
-use chrono::{DateTime, Utc};
-use sqlx::PgPool;
-use common::AppResult;
 use crate::domain::{Email, EmailRepository, EmailStatus, EmailType};
+use chrono::{DateTime, Utc};
+use common::AppResult;
+use sqlx::PgPool;
 
 /// PostgreSQL 邮件仓库
 #[derive(Clone)]

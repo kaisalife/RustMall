@@ -91,8 +91,10 @@ impl IdempotencyService {
                 idempotency::AcquireResult::Duplicate(record) => {
                     // Redis 有成功记录，返回缓存响应
                     if let Some(response_data) = record.response_data {
-                        let dto: PaymentDto = serde_json::from_str(&response_data)
-                            .map_err(|e| AppError::internal(format!("反序列化缓存响应失败: {}", e)))?;
+                        let dto: PaymentDto =
+                            serde_json::from_str(&response_data).map_err(|e| {
+                                AppError::internal(format!("反序列化缓存响应失败: {}", e))
+                            })?;
                         return Ok(Some(dto));
                     }
                     // response_data 为空，降级到数据库查询
@@ -129,8 +131,9 @@ impl IdempotencyService {
             match manager.try_acquire(&idem_key, LOCK_TTL).await? {
                 idempotency::AcquireResult::Duplicate(record) => {
                     if let Some(response_data) = record.response_data {
-                        let dto: RefundDto = serde_json::from_str(&response_data)
-                            .map_err(|e| AppError::internal(format!("反序列化缓存响应失败: {}", e)))?;
+                        let dto: RefundDto = serde_json::from_str(&response_data).map_err(|e| {
+                            AppError::internal(format!("反序列化缓存响应失败: {}", e))
+                        })?;
                         return Ok(Some(dto));
                     }
                 }
@@ -160,7 +163,9 @@ impl IdempotencyService {
             let idem_key = idempotency::IdempotencyKey::from_request("payment", key);
             let response_data = serde_json::to_string(dto)
                 .map_err(|e| AppError::internal(format!("序列化响应失败: {}", e)))?;
-            manager.save_success(&idem_key, &response_data, SUCCESS_TTL).await?;
+            manager
+                .save_success(&idem_key, &response_data, SUCCESS_TTL)
+                .await?;
         }
         Ok(())
     }
@@ -171,7 +176,9 @@ impl IdempotencyService {
             let idem_key = idempotency::IdempotencyKey::from_request("refund", key);
             let response_data = serde_json::to_string(dto)
                 .map_err(|e| AppError::internal(format!("序列化响应失败: {}", e)))?;
-            manager.save_success(&idem_key, &response_data, SUCCESS_TTL).await?;
+            manager
+                .save_success(&idem_key, &response_data, SUCCESS_TTL)
+                .await?;
         }
         Ok(())
     }

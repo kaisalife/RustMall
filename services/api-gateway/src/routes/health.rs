@@ -1,8 +1,4 @@
-use axum::{
-    extract::State,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
@@ -33,9 +29,7 @@ where
     }
 }
 
-pub async fn health_check_handler(
-    State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+pub async fn health_check_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let cache_key = "health:status";
 
     // 先查缓存（TTL 3s，避免高频健康检查打满 gRPC）
@@ -86,7 +80,10 @@ pub async fn health_check_handler(
 
     // 写入缓存
     if let Some(ref cache) = state.cache {
-        if let Err(e) = cache.set_json(cache_key, &health, Duration::from_secs(3)).await {
+        if let Err(e) = cache
+            .set_json(cache_key, &health, Duration::from_secs(3))
+            .await
+        {
             tracing::warn!("Failed to write health to cache: {}", e);
         }
     }

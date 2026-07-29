@@ -1,8 +1,8 @@
 //! 日志仓储层：批量写入 app_logs + audit_logs
 
 use common::AppResult;
-use sqlx::{PgPool, query};
-use event_bus::{EventPayload, EventEnvelope};
+use event_bus::{EventEnvelope, EventPayload};
+use sqlx::{query, PgPool};
 
 /// 批量写入应用日志
 pub async fn batch_insert_app_logs(pool: &PgPool, logs: &[EventEnvelope]) -> AppResult<u64> {
@@ -13,7 +13,15 @@ pub async fn batch_insert_app_logs(pool: &PgPool, logs: &[EventEnvelope]) -> App
     let mut rows_affected = 0u64;
     for envelope in logs {
         if let EventPayload::AppLog {
-            level, message, request_id, trace_id, span_id, user_id, fields, file, line,
+            level,
+            message,
+            request_id,
+            trace_id,
+            span_id,
+            user_id,
+            fields,
+            file,
+            line,
         } = &envelope.payload
         {
             let result = query(
@@ -54,7 +62,16 @@ pub async fn batch_insert_audit_logs(pool: &PgPool, logs: &[EventEnvelope]) -> A
     let mut rows_affected = 0u64;
     for envelope in logs {
         if let EventPayload::AuditLog {
-            user_id, action, resource_type, resource_id, request_id, ip_address, user_agent, details, status, error_message,
+            user_id,
+            action,
+            resource_type,
+            resource_id,
+            request_id,
+            ip_address,
+            user_agent,
+            details,
+            status,
+            error_message,
         } = &envelope.payload
         {
             let result = query(

@@ -1,7 +1,7 @@
 //! Email service client
 
-use tonic::transport::Channel;
 use common::AppResult;
+use tonic::transport::Channel;
 
 use proto::email::email_service_client::EmailServiceClient;
 use proto::email::SendVerificationEmailRequest;
@@ -14,8 +14,9 @@ pub struct EmailServiceClientWrapper {
 impl EmailServiceClientWrapper {
     /// Create a new email service client
     pub async fn new(addr: String) -> AppResult<Self> {
-        let client = EmailServiceClient::connect(addr).await
-            .map_err(|e| common::AppError::Internal(format!("Failed to connect to email service: {}", e)))?;
+        let client = EmailServiceClient::connect(addr).await.map_err(|e| {
+            common::AppError::Internal(format!("Failed to connect to email service: {}", e))
+        })?;
         Ok(Self { client })
     }
 
@@ -32,8 +33,13 @@ impl EmailServiceClientWrapper {
             verification_code,
         };
 
-        let _response = self.client.send_verification_email(request).await
-            .map_err(|e| common::AppError::Internal(format!("Failed to send verification email: {}", e)))?;
+        let _response = self
+            .client
+            .send_verification_email(request)
+            .await
+            .map_err(|e| {
+                common::AppError::Internal(format!("Failed to send verification email: {}", e))
+            })?;
 
         Ok(())
     }

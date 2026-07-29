@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
-use common::{AppResult, AppError};
+use super::command::{
+    AddStockCommand, DeductStockCommand, ReleaseStockCommand, ReserveStockCommand,
+};
+use super::dto::{AddStockResult, DeductStockResult, InventoryDto};
 use crate::domain::{Inventory, InventoryRepository};
-use super::command::{DeductStockCommand, AddStockCommand, ReserveStockCommand, ReleaseStockCommand};
-use super::dto::{InventoryDto, DeductStockResult, AddStockResult};
+use common::{AppError, AppResult};
 
 #[derive(Clone)]
 pub struct InventoryApplicationService {
@@ -12,7 +14,9 @@ pub struct InventoryApplicationService {
 
 impl InventoryApplicationService {
     pub fn new(inventory_repository: Arc<dyn InventoryRepository>) -> Self {
-        Self { inventory_repository }
+        Self {
+            inventory_repository,
+        }
     }
 
     pub async fn deduct_stock(&self, command: DeductStockCommand) -> AppResult<DeductStockResult> {
@@ -21,7 +25,10 @@ impl InventoryApplicationService {
         }
 
         // 使用原子操作防止超卖
-        let updated = self.inventory_repository.atomic_deduct_stock(command.product_id, command.quantity).await?;
+        let updated = self
+            .inventory_repository
+            .atomic_deduct_stock(command.product_id, command.quantity)
+            .await?;
 
         Ok(DeductStockResult {
             success: true,
@@ -34,9 +41,14 @@ impl InventoryApplicationService {
             return Err(AppError::invalid_input("Quantity must be positive"));
         }
 
-        let inventory = match self.inventory_repository.find_by_product_id(command.product_id).await? {
+        let inventory = match self
+            .inventory_repository
+            .find_by_product_id(command.product_id)
+            .await?
+        {
             Some(mut inv) => {
-                inv.add_stock(command.quantity).map_err(|e| AppError::invalid_input(e))?;
+                inv.add_stock(command.quantity)
+                    .map_err(|e| AppError::invalid_input(e))?;
                 self.inventory_repository.update(inv).await?
             }
             None => {
@@ -52,15 +64,24 @@ impl InventoryApplicationService {
     }
 
     pub async fn get_stock(&self, product_id: u64) -> AppResult<InventoryDto> {
-        let inventory = self.inventory_repository.find_by_product_id(product_id).await?
+        let inventory = self
+            .inventory_repository
+            .find_by_product_id(product_id)
+            .await?
             .ok_or_else(|| AppError::not_found("Inventory not found for product"))?;
 
         Ok(Self::inventory_to_dto(inventory))
     }
 
     pub async fn batch_get_stock(&self, product_ids: Vec<u64>) -> AppResult<Vec<InventoryDto>> {
-        let inventories = self.inventory_repository.batch_find_by_product_ids(product_ids).await?;
-        Ok(inventories.into_iter().map(Self::inventory_to_dto).collect())
+        let inventories = self
+            .inventory_repository
+            .batch_find_by_product_ids(product_ids)
+            .await?;
+        Ok(inventories
+            .into_iter()
+            .map(Self::inventory_to_dto)
+            .collect())
     }
 
     pub async fn reserve_stock(&self, command: ReserveStockCommand) -> AppResult<InventoryDto> {
@@ -69,27 +90,44 @@ impl InventoryApplicationService {
         }
 
         // 使用原子操作防止超卖
-        let inventory = self.inventory_repository.atomic_reserve_stock(command.product_id, command.quantity).await?;
+        let inventory = self
+            .inventory_repository
+            .atomic_reserve_stock(command.product_id, command.quantity)
+            .await?;
 
         Ok(Self::inventory_to_dto(inventory))
     }
 
-    pub async fn release_reserved_stock(&self, command: ReleaseStockCommand) -> AppResult<InventoryDto> {
+    pub async fn release_reserved_stock(
+        &self,
+        command: ReleaseStockCommand,
+    ) -> AppResult<InventoryDto> {
         if command.quantity <= 0 {
             return Err(AppError::invalid_input("Quantity must be positive"));
         }
 
         // 使用原子操作释放预留
-        let inventory = self.inventory_repository.atomic_release_stock(command.product_id, command.quantity).await?;
+        let inventory = self
+            .inventory_repository
+            .atomic_release_stock(command.product_id, command.quantity)
+            .await?;
 
         Ok(Self::inventory_to_dto(inventory))
     }
 
     /// 批量预留库存，返回每个商品的预留结果
-    pub async fn batch_reserve_stock(&self, items: Vec<(u64, i32)>) -> Vec<(u64, AppResult<InventoryDto>)> {
+    pub async fn batch_reserve_stock(
+        &self,
+        items: Vec<(u64, i32)>,
+    ) -> Vec<(u64, AppResult<InventoryDto>)> {
         let mut results = Vec::with_capacity(items.len());
         for (product_id, quantity) in items {
-            let result = self.reserve_stock(ReserveStockCommand { product_id, quantity }).await;
+            let result = self
+                .reserve_stock(ReserveStockCommand {
+                    product_id,
+                    quantity,
+                })
+                .await;
             results.push((product_id, result));
         }
         results
@@ -99,7 +137,11 @@ impl InventoryApplicationService {
     pub async fn batch_release_stock(&self, items: Vec<(u64, i32)>) -> Vec<(u64, AppResult<()>)> {
         let mut results = Vec::with_capacity(items.len());
         for (product_id, quantity) in items {
-            let result = self.release_reserved_stock(ReleaseStockCommand { product_id, quantity })
+            let result = self
+                .release_reserved_stock(ReleaseStockCommand {
+                    product_id,
+                    quantity,
+                })
                 .await
                 .map(|_| ());
             if let Err(ref e) = result {

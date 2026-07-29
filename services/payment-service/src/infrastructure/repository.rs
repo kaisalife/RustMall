@@ -109,9 +109,19 @@ impl PaymentRepository for PgPaymentRepository {
         //     .await?;
         // Ok(record.into_domain()?)
         let _ = (
-            &status_str, &channel_str, &amount_str, &fee_str, currency_str,
-            payment.id, payment.user_id, payment.order_id, &payment.idempotency_key,
-            &payment.channel_txn_id, &payment.pay_url, payment.created_at, payment.updated_at,
+            &status_str,
+            &channel_str,
+            &amount_str,
+            &fee_str,
+            currency_str,
+            payment.id,
+            payment.user_id,
+            payment.order_id,
+            &payment.idempotency_key,
+            &payment.channel_txn_id,
+            &payment.pay_url,
+            payment.created_at,
+            payment.updated_at,
         );
         todo!("绑定参数并执行 INSERT payment_orders")
     }
@@ -237,8 +247,13 @@ impl TransactionRepository for PgTransactionRepository {
         //     .await?;
         // Ok(record.into_domain()?)
         let _ = (
-            &txn_type_str, &amount_str, &balance_after_str,
-            txn.id, txn.payment_order_id, &txn.channel_txn_id, txn.created_at,
+            &txn_type_str,
+            &amount_str,
+            &balance_after_str,
+            txn.id,
+            txn.payment_order_id,
+            &txn.channel_txn_id,
+            txn.created_at,
         );
         todo!("绑定参数并执行 INSERT payment_transactions")
     }
@@ -309,9 +324,16 @@ impl RefundRepository for PgRefundRepository {
         //     .await?;
         // Ok(record.into_domain()?)
         let _ = (
-            &status_str, &amount_str, currency_str,
-            refund.id, refund.payment_id, &refund.idempotency_key,
-            &refund.reason, &refund.channel_txn_id, refund.created_at, refund.updated_at,
+            &status_str,
+            &amount_str,
+            currency_str,
+            refund.id,
+            refund.payment_id,
+            &refund.idempotency_key,
+            &refund.reason,
+            &refund.channel_txn_id,
+            refund.created_at,
+            refund.updated_at,
         );
         todo!("绑定参数并执行 INSERT payment_refunds")
     }
@@ -405,8 +427,9 @@ impl PaymentRecord {
     fn into_domain(self) -> AppResult<Payment> {
         let amount = parse_decimal(&self.amount)?;
         let fee = parse_decimal(&self.fee)?;
-        let currency = Currency::from_str(&self.currency)
-            .map_err(|e| AppError::internal(format!("invalid currency '{}': {}", self.currency, e)))?;
+        let currency = Currency::from_str(&self.currency).map_err(|e| {
+            AppError::internal(format!("invalid currency '{}': {}", self.currency, e))
+        })?;
         Ok(Payment {
             id: self.id as u64,
             idempotency_key: self.idempotency_key,
@@ -479,8 +502,9 @@ impl RefundRecord {
     #[allow(dead_code)]
     fn into_domain(self) -> AppResult<Refund> {
         let amount = parse_decimal(&self.refund_amount)?;
-        let currency = Currency::from_str(&self.currency)
-            .map_err(|e| AppError::internal(format!("invalid currency '{}': {}", self.currency, e)))?;
+        let currency = Currency::from_str(&self.currency).map_err(|e| {
+            AppError::internal(format!("invalid currency '{}': {}", self.currency, e))
+        })?;
         Ok(Refund {
             id: self.id as u64,
             idempotency_key: self.idempotency_key,

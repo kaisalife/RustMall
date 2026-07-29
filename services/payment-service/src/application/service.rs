@@ -8,9 +8,7 @@ use std::sync::Arc;
 
 use common::{AppError, AppResult, SnowflakeIdGenerator};
 
-use crate::domain::{
-    PaymentRepository, RefundRepository, TransactionRepository,
-};
+use crate::domain::{PaymentRepository, RefundRepository, TransactionRepository};
 use crate::infrastructure::PaymentChannelAdapter;
 
 use super::command::{CallbackCommand, CreatePaymentCommand, RefundCommand};
@@ -51,10 +49,7 @@ impl PaymentApplicationService {
         id_generator: Arc<SnowflakeIdGenerator>,
     ) -> Self {
         // 构建幂等控制服务（复用支付/退款仓储）
-        let idempotency = IdempotencyService::new(
-            payment_repo.clone(),
-            refund_repo.clone(),
-        );
+        let idempotency = IdempotencyService::new(payment_repo.clone(), refund_repo.clone());
         // 使用默认加权路由策略
         let router = PaymentRouter::with_default_strategy();
 

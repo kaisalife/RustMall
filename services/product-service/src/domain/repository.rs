@@ -1,6 +1,6 @@
 use common::AppResult;
 
-use super::{Product, Category};
+use super::{Category, Product};
 
 #[async_trait::async_trait]
 pub trait ProductRepository: Send + Sync + 'static {

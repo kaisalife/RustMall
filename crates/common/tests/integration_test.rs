@@ -83,7 +83,7 @@ fn test_jwt_full_lifecycle() {
     let secret = "test_secret_key";
 
     // 1. 生成 access token
-    let claims = Claims::new(12345, "test@example.com".to_string(), 1);
+    let claims = Claims::new(12345, "test@example.com".to_string(), 1, "user".to_string());
     let access_token = generate_jwt(&claims, secret).unwrap();
 
     // 2. 验证 access token

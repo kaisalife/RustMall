@@ -96,8 +96,8 @@ impl Refund {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::domain::Currency;
+    use rust_decimal_macros::dec;
 
     fn create_test_refund() -> Refund {
         Refund::new(

@@ -1,21 +1,15 @@
 //! 邮件 gRPC 服务实现
 
-use tonic::{Request, Response, Status};
-use crate::application::EmailApplicationService;
 use crate::application::command::{
+    SendCustomEmailCommand, SendOrderNotificationCommand, SendPasswordResetEmailCommand,
     SendVerificationEmailCommand,
-    SendOrderNotificationCommand,
-    SendPasswordResetEmailCommand,
-    SendCustomEmailCommand,
 };
+use crate::application::EmailApplicationService;
+use tonic::{Request, Response, Status};
 
 use proto::email::{
-    email_service_server::EmailService,
-    SendVerificationEmailRequest,
-    SendOrderNotificationRequest,
-    SendPasswordResetEmailRequest,
-    SendCustomEmailRequest,
-    SendEmailResponse,
+    email_service_server::EmailService, SendCustomEmailRequest, SendEmailResponse,
+    SendOrderNotificationRequest, SendPasswordResetEmailRequest, SendVerificationEmailRequest,
 };
 
 /// 邮件 gRPC 服务实现
@@ -39,13 +33,15 @@ impl EmailService for EmailServiceImpl {
         let req = request.into_inner();
         tracing::info!("📨 收到发送验证邮件请求：{}", req.to_email);
 
-        match self.service.send_verification_email(
-            SendVerificationEmailCommand {
+        match self
+            .service
+            .send_verification_email(SendVerificationEmailCommand {
                 to_email: req.to_email,
                 username: req.username,
                 verification_code: req.verification_code,
-            },
-        ).await {
+            })
+            .await
+        {
             Ok(message_id) => Ok(Response::new(SendEmailResponse {
                 success: true,
                 message_id,
@@ -61,15 +57,17 @@ impl EmailService for EmailServiceImpl {
         let req = request.into_inner();
         tracing::info!("📨 收到发送订单通知邮件请求：订单 #{}", req.order_id);
 
-        match self.service.send_order_notification(
-            SendOrderNotificationCommand {
+        match self
+            .service
+            .send_order_notification(SendOrderNotificationCommand {
                 to_email: req.to_email,
                 username: req.username,
                 order_id: req.order_id,
                 total_amount: req.total_amount,
                 status: req.status,
-            },
-        ).await {
+            })
+            .await
+        {
             Ok(message_id) => Ok(Response::new(SendEmailResponse {
                 success: true,
                 message_id,
@@ -85,13 +83,15 @@ impl EmailService for EmailServiceImpl {
         let req = request.into_inner();
         tracing::info!("📨 收到发送密码重置邮件请求：{}", req.to_email);
 
-        match self.service.send_password_reset_email(
-            SendPasswordResetEmailCommand {
+        match self
+            .service
+            .send_password_reset_email(SendPasswordResetEmailCommand {
                 to_email: req.to_email,
                 username: req.username,
                 reset_token: req.reset_token,
-            },
-        ).await {
+            })
+            .await
+        {
             Ok(message_id) => Ok(Response::new(SendEmailResponse {
                 success: true,
                 message_id,
@@ -107,14 +107,16 @@ impl EmailService for EmailServiceImpl {
         let req = request.into_inner();
         tracing::info!("📨 收到发送自定义邮件请求：{}", req.to_email);
 
-        match self.service.send_custom_email(
-            SendCustomEmailCommand {
+        match self
+            .service
+            .send_custom_email(SendCustomEmailCommand {
                 to_email: req.to_email,
                 username: req.username,
                 subject: req.subject,
                 html_content: req.html_content,
-            },
-        ).await {
+            })
+            .await
+        {
             Ok(message_id) => Ok(Response::new(SendEmailResponse {
                 success: true,
                 message_id,

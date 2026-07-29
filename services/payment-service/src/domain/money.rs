@@ -169,9 +169,7 @@ impl Money {
     ///
     /// 注意：高精度币种（如 BTC）会截断为 2 位小数。
     pub fn to_cents(&self) -> i64 {
-        (self.amount * dec!(100))
-            .try_into()
-            .unwrap_or(0)
+        (self.amount * dec!(100)).try_into().unwrap_or(0)
     }
 
     /// 校验同币种

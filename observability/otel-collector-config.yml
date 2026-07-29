@@ -1,0 +1,35 @@
+# OpenTelemetry Collector 配置
+# 参考 otelcol-contrib 标准配置
+
+# 接收器 - 接收来自各服务的 OTLP 数据
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317   # OTLP gRPC 接收端口
+      http:
+        endpoint: 0.0.0.0:4318   # OTLP HTTP 接收端口
+
+# 处理器 - 批处理优化
+processors:
+  batch:
+    timeout: 5s             # 批处理超时 5 秒
+    send_batch_size: 512    # 每批最大条数 512
+
+# 导出器 - 发送到 Tempo
+exporters:
+  otlp/tempo:
+    endpoint: tempo:4317    # Tempo OTLP gRPC 端点
+    tls:
+      insecure: true        # 内网通信，不使用 TLS
+
+# 服务管道
+service:
+  telemetry:
+    logs:
+      level: info           # 服务日志级别：info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/tempo]

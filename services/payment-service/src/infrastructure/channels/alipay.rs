@@ -11,12 +11,10 @@
 //! 金额单位：支付宝金额以「元」为单位（字符串，两位小数），与 `Decimal` 直接对应。
 //! 签名算法：RSA2（推荐）或 RSA，使用商户私钥签名、支付宝公钥验签。
 
+use super::{ChannelPayResult, ChannelQueryResult, ChannelRefundResult, PaymentChannelAdapter};
+use crate::domain::{Money, PaymentChannel};
 use async_trait::async_trait;
 use common::AppResult;
-use crate::domain::{Money, PaymentChannel};
-use super::{
-    ChannelPayResult, ChannelQueryResult, ChannelRefundResult, PaymentChannelAdapter,
-};
 
 /// 支付宝适配器。
 ///
@@ -41,7 +39,12 @@ impl AlipayAdapter {
         alipay_public_key: String,
         notify_url: String,
     ) -> Self {
-        Self { app_id, private_key, alipay_public_key, notify_url }
+        Self {
+            app_id,
+            private_key,
+            alipay_public_key,
+            notify_url,
+        }
     }
 }
 

@@ -31,6 +31,7 @@ redis-cache = { path = "../../crates/redis-cache" }
 event-bus = { path = "../../crates/event-bus" }
 tower.workspace = true
 tower-http.workspace = true
+sqlx.workspace = true
 
 [lib]
 name = "api_gateway"

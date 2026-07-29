@@ -1,11 +1,10 @@
-use tonic::{Request, Response, Status};
 use crate::application::{OrderApplicationService, OrderDto, OrderItemDto};
+use tonic::{Request, Response, Status};
 
 use proto::order::{
-    order_service_server::OrderService,
-    CreateOrderRequest, OrderResponse, OrderStatus,
-    GetOrderRequest, ListOrdersRequest, ListOrdersResponse,
-    UpdateOrderStatusRequest, OrderItem as ProtoOrderItem,
+    order_service_server::OrderService, CreateOrderRequest, GetOrderRequest, ListOrdersRequest,
+    ListOrdersResponse, OrderItem as ProtoOrderItem, OrderResponse, OrderStatus,
+    UpdateOrderStatusRequest,
 };
 
 #[derive(Clone)]
@@ -27,7 +26,8 @@ impl OrderService for OrderServiceImpl {
     ) -> Result<Response<OrderResponse>, Status> {
         let req = request.into_inner();
 
-        let items: Vec<OrderItemDto> = req.items
+        let items: Vec<OrderItemDto> = req
+            .items
             .into_iter()
             .map(|i| OrderItemDto {
                 product_id: i.product_id,
@@ -36,7 +36,11 @@ impl OrderService for OrderServiceImpl {
             })
             .collect();
 
-        let result = self.service.create_order(req.user_id, items).await.map_err(app_error_to_status)?;
+        let result = self
+            .service
+            .create_order(req.user_id, items)
+            .await
+            .map_err(app_error_to_status)?;
 
         Ok(Response::new(Self::dto_to_proto(result)))
     }
@@ -47,7 +51,11 @@ impl OrderService for OrderServiceImpl {
     ) -> Result<Response<OrderResponse>, Status> {
         let req = request.into_inner();
 
-        let result = self.service.get_order(req.order_id).await.map_err(app_error_to_status)?;
+        let result = self
+            .service
+            .get_order(req.order_id)
+            .await
+            .map_err(app_error_to_status)?;
 
         Ok(Response::new(Self::dto_to_proto(result)))
     }
@@ -58,7 +66,11 @@ impl OrderService for OrderServiceImpl {
     ) -> Result<Response<ListOrdersResponse>, Status> {
         let req = request.into_inner();
 
-        let (orders, total) = self.service.list_orders(req.user_id, req.page, req.page_size).await.map_err(app_error_to_status)?;
+        let (orders, total) = self
+            .service
+            .list_orders(req.user_id, req.page, req.page_size)
+            .await
+            .map_err(app_error_to_status)?;
 
         let orders: Vec<OrderResponse> = orders.into_iter().map(Self::dto_to_proto).collect();
 
@@ -83,9 +95,14 @@ impl OrderService for OrderServiceImpl {
             Ok(OrderStatus::Completed) => "COMPLETED",
             Ok(OrderStatus::Cancelled) => "CANCELLED",
             Err(_) => "PENDING",
-        }.to_string();
+        }
+        .to_string();
 
-        let result = self.service.update_order_status(req.order_id, status).await.map_err(app_error_to_status)?;
+        let result = self
+            .service
+            .update_order_status(req.order_id, status)
+            .await
+            .map_err(app_error_to_status)?;
 
         Ok(Response::new(Self::dto_to_proto(result)))
     }
@@ -105,11 +122,15 @@ impl OrderServiceImpl {
             user_id: dto.user_id,
             total_amount: dto.total_amount,
             status: status as i32,
-            items: dto.items.into_iter().map(|i| ProtoOrderItem {
-                product_id: i.product_id,
-                quantity: i.quantity,
-                unit_price: i.unit_price,
-            }).collect(),
+            items: dto
+                .items
+                .into_iter()
+                .map(|i| ProtoOrderItem {
+                    product_id: i.product_id,
+                    quantity: i.quantity,
+                    unit_price: i.unit_price,
+                })
+                .collect(),
             created_at: dto.created_at,
             updated_at: dto.updated_at,
         }

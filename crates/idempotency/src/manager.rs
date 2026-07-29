@@ -152,7 +152,10 @@ impl IdempotencyManager {
         if let Some(record) = self.get_record(redis_key).await? {
             match record.status {
                 IdempotencyStatus::Success => {
-                    debug!(key = redis_key, "Idempotency hit: SUCCESS, returning cached");
+                    debug!(
+                        key = redis_key,
+                        "Idempotency hit: SUCCESS, returning cached"
+                    );
                     return Ok(AcquireResult::Duplicate(record));
                 }
                 IdempotencyStatus::Processing => {
@@ -169,8 +172,9 @@ impl IdempotencyManager {
 
         // 2. SETNX 抢锁（原子操作：写入 PROCESSING + 设置 TTL）
         let record = IdempotencyRecord::processing();
-        let record_json = serde_json::to_string(&record)
-            .map_err(|e| common::AppError::internal(format!("Serialize idempotency record failed: {}", e)))?;
+        let record_json = serde_json::to_string(&record).map_err(|e| {
+            common::AppError::internal(format!("Serialize idempotency record failed: {}", e))
+        })?;
 
         let mut conn = self.conn.clone();
         // SET key value NX EX ttl（仅当 key 不存在时设置，带过期时间）
@@ -213,11 +217,7 @@ impl IdempotencyManager {
     ///
     /// 将状态更新为 FAILED，允许后续重试。
     /// `ttl` 为失败记录的保留时间（建议 5min，防短时间疯狂重试）。
-    pub async fn save_failure(
-        &self,
-        key: &IdempotencyKey,
-        ttl: Duration,
-    ) -> AppResult<()> {
+    pub async fn save_failure(&self, key: &IdempotencyKey, ttl: Duration) -> AppResult<()> {
         let record = IdempotencyRecord::failed();
         self.save_record(key.redis_key(), &record, ttl).await
     }
@@ -240,8 +240,12 @@ impl IdempotencyManager {
 
         match value {
             Some(json) => {
-                let record: IdempotencyRecord = serde_json::from_str(&json)
-                    .map_err(|e| common::AppError::internal(format!("Deserialize idempotency record failed: {}", e)))?;
+                let record: IdempotencyRecord = serde_json::from_str(&json).map_err(|e| {
+                    common::AppError::internal(format!(
+                        "Deserialize idempotency record failed: {}",
+                        e
+                    ))
+                })?;
                 Ok(Some(record))
             }
             None => Ok(None),
@@ -263,7 +267,11 @@ impl IdempotencyManager {
             .await
             .map_err(|e| common::AppError::internal(format!("Redis SET failed: {}", e)))?;
 
-        debug!(key = redis_key, status = record.status.as_str(), "Idempotency record saved");
+        debug!(
+            key = redis_key,
+            status = record.status.as_str(),
+            "Idempotency record saved"
+        );
         Ok(())
     }
 

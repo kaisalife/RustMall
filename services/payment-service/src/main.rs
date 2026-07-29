@@ -12,8 +12,8 @@
 //! 注意：当前 `AppConfig` 尚未包含 `payment_service` 配置段，
 //! 服务地址与 worker_id 暂以常量硬编码，后续应补齐配置项。
 
-mod domain;
 mod application;
+mod domain;
 mod infrastructure;
 mod interface;
 
@@ -63,8 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 4.2 雪花 ID 生成器（用于支付订单、流水、退款单主键）
     let id_generator = Arc::new(
-        SnowflakeIdGenerator::new(PAYMENT_WORKER_ID)
-            .expect("Failed to create ID generator"),
+        SnowflakeIdGenerator::new(PAYMENT_WORKER_ID).expect("Failed to create ID generator"),
     );
 
     // 4.3 渠道适配器：开发环境使用测试桩，生产环境替换为真实适配器

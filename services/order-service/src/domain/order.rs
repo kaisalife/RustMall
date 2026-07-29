@@ -29,7 +29,10 @@ pub struct Order {
 
 impl Order {
     pub fn new(id: u64, user_id: u64, items: Vec<OrderItem>) -> Self {
-        let total_amount = items.iter().map(|item| item.unit_price * item.quantity as f64).sum();
+        let total_amount = items
+            .iter()
+            .map(|item| item.unit_price * item.quantity as f64)
+            .sum();
         Self {
             id,
             user_id,

@@ -29,8 +29,8 @@ use crate::application::{
 
 use proto::payment::{
     payment_service_server::PaymentService, CallbackRequest, CallbackResponse,
-    CreatePaymentRequest, GetPaymentRequest, GetRefundRequest, PaymentResponse,
-    RefundRequest, RefundResponse,
+    CreatePaymentRequest, GetPaymentRequest, GetRefundRequest, PaymentResponse, RefundRequest,
+    RefundResponse,
 };
 
 /// gRPC 服务实现，持有 application 层服务的共享引用。

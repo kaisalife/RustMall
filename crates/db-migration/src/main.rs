@@ -1,11 +1,11 @@
 //! Standalone database migration tool
-//! 
+//!
 //! Usage:
 //!   cargo run --bin migrate
 //!   DATABASE_URL=postgres://... cargo run --bin migrate
 
 use std::env;
-use tracing::{info, error, Level};
+use tracing::{error, info, Level};
 use tracing_subscriber::FmtSubscriber;
 
 use common::{load_config, AppResult};
@@ -16,8 +16,7 @@ async fn main() -> AppResult<()> {
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::INFO)
         .finish();
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("Failed to set tracing subscriber");
+    tracing::subscriber::set_global_default(subscriber).expect("Failed to set tracing subscriber");
 
     info!("========================================");
     info!("  Simple Trade - Database Migration Tool");
@@ -28,12 +27,10 @@ async fn main() -> AppResult<()> {
 
     let pool = if let Some(url) = database_url {
         info!("Using DATABASE_URL from environment");
-        let pool = sqlx::PgPool::connect(&url)
-            .await
-            .map_err(|e| {
-                error!("Failed to connect using DATABASE_URL: {}", e);
-                common::AppError::Database(e)
-            })?;
+        let pool = sqlx::PgPool::connect(&url).await.map_err(|e| {
+            error!("Failed to connect using DATABASE_URL: {}", e);
+            common::AppError::Database(e)
+        })?;
         db_migration::run_migrations(&pool).await?;
         pool
     } else {
@@ -45,16 +42,15 @@ async fn main() -> AppResult<()> {
     // Verify migrations were applied
     info!("");
     info!("Verifying migration status...");
-    
-    let applied: Vec<(i64, String)> = sqlx::query_as(
-        "SELECT version, description FROM _sqlx_migrations ORDER BY version"
-    )
-    .fetch_all(&pool)
-    .await
-    .map_err(|e| {
-        error!("Failed to fetch migration status: {}", e);
-        common::AppError::Database(e)
-    })?;
+
+    let applied: Vec<(i64, String)> =
+        sqlx::query_as("SELECT version, description FROM _sqlx_migrations ORDER BY version")
+            .fetch_all(&pool)
+            .await
+            .map_err(|e| {
+                error!("Failed to fetch migration status: {}", e);
+                common::AppError::Database(e)
+            })?;
 
     info!("");
     info!("✅ Applied Migrations:");

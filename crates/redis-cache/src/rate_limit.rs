@@ -12,10 +12,18 @@ pub struct RedisRateLimiter {
 
 impl RedisRateLimiter {
     pub fn new(conn: ConnectionManager, max_requests: u32, window_size: Duration) -> Self {
-        Self { conn, max_requests, window_size }
+        Self {
+            conn,
+            max_requests,
+            window_size,
+        }
     }
 
-    pub async fn new_with_url(url: &str, max_requests: u32, window_size: Duration) -> Result<Self, redis::RedisError> {
+    pub async fn new_with_url(
+        url: &str,
+        max_requests: u32,
+        window_size: Duration,
+    ) -> Result<Self, redis::RedisError> {
         let client = redis::Client::open(url)?;
         let conn = ConnectionManager::new(client).await?;
         Ok(Self::new(conn, max_requests, window_size))
@@ -48,7 +56,10 @@ impl RedisRateLimiter {
             .unwrap_or((0,));
 
         // 设置 key 过期时间
-        let _: () = conn.expire(&redis_key, self.window_size.as_secs() as i64 + 1).await.unwrap_or(());
+        let _: () = conn
+            .expire(&redis_key, self.window_size.as_secs() as i64 + 1)
+            .await
+            .unwrap_or(());
 
         count <= self.max_requests as i64
     }

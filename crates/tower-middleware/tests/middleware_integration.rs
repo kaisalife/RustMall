@@ -21,19 +21,17 @@ use tower_middleware::{
 fn make_auth_app(secret: &str) -> Router {
     Router::new()
         .route("/protected", get(|| async { "ok" }))
-        .layer(middleware::from_fn(create_auth_middleware(secret.to_string())))
+        .layer(middleware::from_fn(create_auth_middleware(
+            secret.to_string(),
+        )))
 }
 
 /// 构建带限流中间件的测试路由
 fn make_rate_limit_app(max_requests: u32) -> Router {
-    let limiter = Arc::new(RateLimiter::new(
-        max_requests,
-        Duration::from_secs(60),
-        100,
-    ));
+    let limiter = Arc::new(RateLimiter::new(max_requests, Duration::from_secs(60), 100));
     Router::new()
         .route("/api", get(|| async { "ok" }))
-        .layer(middleware::from_fn(create_rate_limit_middleware(limiter)))
+        .layer(middleware::from_fn(create_rate_limit_middleware(limiter, std::sync::Arc::new(vec![]))))
 }
 
 #[tokio::test]
@@ -58,7 +56,7 @@ async fn test_auth_middleware_accepts_valid_token() {
     let secret = "test_secret";
     let app = make_auth_app(secret);
 
-    let claims = common::Claims::new(1, "test@example.com".to_string(), 1);
+    let claims = common::Claims::new(1, "test@example.com".to_string(), 1, "user".to_string());
     let token = common::generate_jwt(&claims, secret).unwrap();
 
     let response = app
@@ -100,12 +98,7 @@ async fn test_rate_limit_allows_within_limit() {
     for _ in 0..5 {
         let response = app
             .clone()
-            .oneshot(
-                Request::builder()
-                    .uri("/api")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri("/api").body(Body::empty()).unwrap())
             .await
             .unwrap();
 
@@ -121,12 +114,7 @@ async fn test_rate_limit_blocks_over_limit() {
     for _ in 0..3 {
         let response = app
             .clone()
-            .oneshot(
-                Request::builder()
-                    .uri("/api")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri("/api").body(Body::empty()).unwrap())
             .await
             .unwrap();
 
@@ -135,12 +123,7 @@ async fn test_rate_limit_blocks_over_limit() {
 
     // 第 4 个请求应该被限流
     let response = app
-        .oneshot(
-            Request::builder()
-                .uri("/api")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::builder().uri("/api").body(Body::empty()).unwrap())
         .await
         .unwrap();
 

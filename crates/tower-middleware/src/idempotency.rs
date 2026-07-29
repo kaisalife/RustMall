@@ -77,19 +77,11 @@ pub async fn idempotency_middleware(
         }
         Ok(AcquireResult::Duplicate(_)) => {
             // 已有成功记录，返回 409
-            (
-                StatusCode::CONFLICT,
-                "请求已处理，请勿重复提交",
-            )
-                .into_response()
+            (StatusCode::CONFLICT, "请求已处理，请勿重复提交").into_response()
         }
         Ok(AcquireResult::Processing) => {
             // 处理中，返回 409
-            (
-                StatusCode::CONFLICT,
-                "请求处理中，请稍后重试",
-            )
-                .into_response()
+            (StatusCode::CONFLICT, "请求处理中，请稍后重试").into_response()
         }
         Err(e) => {
             tracing::error!("幂等锁获取失败: {:?}", e);

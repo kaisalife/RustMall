@@ -5,9 +5,9 @@
 
 pub mod money;
 pub mod payment;
-pub mod transaction;
 pub mod refund;
 pub mod repository;
+pub mod transaction;
 
 pub use money::{Currency, Money};
 pub use payment::{Payment, PaymentChannel, PaymentStatus};

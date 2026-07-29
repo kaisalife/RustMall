@@ -1,20 +1,17 @@
 use tonic::{Request, Response, Status};
 
-use crate::application::InventoryApplicationService;
 use crate::application::command::{
-    DeductStockCommand, AddStockCommand, ReserveStockCommand, ReleaseStockCommand,
+    AddStockCommand, DeductStockCommand, ReleaseStockCommand, ReserveStockCommand,
 };
+use crate::application::InventoryApplicationService;
 
 use proto::inventory::{
-    inventory_service_server::InventoryService,
-    DeductStockRequest, DeductStockResponse,
-    AddStockRequest, AddStockResponse,
-    GetStockRequest, StockResponse,
-    BatchGetStockRequest, BatchGetStockResponse,
-    ReserveStockRequest, ReserveStockResponse,
-    ReleaseStockRequest, ReleaseStockResponse,
-    BatchReserveStockRequest, BatchReserveStockResponse, BatchReserveStockResult,
-    BatchReleaseStockRequest, BatchReleaseStockResponse,
+    inventory_service_server::InventoryService, AddStockRequest, AddStockResponse,
+    BatchGetStockRequest, BatchGetStockResponse, BatchReleaseStockRequest,
+    BatchReleaseStockResponse, BatchReserveStockRequest, BatchReserveStockResponse,
+    BatchReserveStockResult, DeductStockRequest, DeductStockResponse, GetStockRequest,
+    ReleaseStockRequest, ReleaseStockResponse, ReserveStockRequest, ReserveStockResponse,
+    StockResponse,
 };
 
 #[derive(Clone)]
@@ -46,7 +43,9 @@ impl InventoryService for InventoryServiceImpl {
     ) -> Result<Response<DeductStockResponse>, Status> {
         let req = request.into_inner();
 
-        let result = self.service.deduct_stock(DeductStockCommand {
+        let result = self
+            .service
+            .deduct_stock(DeductStockCommand {
                 product_id: req.product_id,
                 quantity: req.quantity,
             })
@@ -65,7 +64,9 @@ impl InventoryService for InventoryServiceImpl {
     ) -> Result<Response<AddStockResponse>, Status> {
         let req = request.into_inner();
 
-        let result = self.service.add_stock(AddStockCommand {
+        let result = self
+            .service
+            .add_stock(AddStockCommand {
                 product_id: req.product_id,
                 quantity: req.quantity,
             })
@@ -84,7 +85,9 @@ impl InventoryService for InventoryServiceImpl {
     ) -> Result<Response<StockResponse>, Status> {
         let req = request.into_inner();
 
-        let result = self.service.get_stock(req.product_id)
+        let result = self
+            .service
+            .get_stock(req.product_id)
             .await
             .map_err(app_error_to_status)?;
 
@@ -102,7 +105,9 @@ impl InventoryService for InventoryServiceImpl {
     ) -> Result<Response<BatchGetStockResponse>, Status> {
         let req = request.into_inner();
 
-        let results = self.service.batch_get_stock(req.product_ids)
+        let results = self
+            .service
+            .batch_get_stock(req.product_ids)
             .await
             .map_err(app_error_to_status)?;
 
@@ -125,7 +130,9 @@ impl InventoryService for InventoryServiceImpl {
     ) -> Result<Response<ReserveStockResponse>, Status> {
         let req = request.into_inner();
 
-        let inventory = self.service.reserve_stock(ReserveStockCommand {
+        let inventory = self
+            .service
+            .reserve_stock(ReserveStockCommand {
                 product_id: req.product_id,
                 quantity: req.quantity,
             })
@@ -144,7 +151,9 @@ impl InventoryService for InventoryServiceImpl {
     ) -> Result<Response<ReleaseStockResponse>, Status> {
         let req = request.into_inner();
 
-        let inventory = self.service.release_reserved_stock(ReleaseStockCommand {
+        let inventory = self
+            .service
+            .release_reserved_stock(ReleaseStockCommand {
                 product_id: req.product_id,
                 quantity: req.quantity,
             })
@@ -162,21 +171,37 @@ impl InventoryService for InventoryServiceImpl {
         request: Request<BatchReserveStockRequest>,
     ) -> Result<Response<BatchReserveStockResponse>, Status> {
         let req = request.into_inner();
-        let items: Vec<(u64, i32)> = req.items.iter().map(|i| (i.product_id, i.quantity)).collect();
+        let items: Vec<(u64, i32)> = req
+            .items
+            .iter()
+            .map(|i| (i.product_id, i.quantity))
+            .collect();
         let results = self.service.batch_reserve_stock(items).await;
 
         let mut all_success = true;
-        let results: Vec<_> = results.into_iter().map(|(product_id, result)| {
-            match result {
-                Ok(_) => BatchReserveStockResult { product_id, success: true, error: String::new() },
+        let results: Vec<_> = results
+            .into_iter()
+            .map(|(product_id, result)| match result {
+                Ok(_) => BatchReserveStockResult {
+                    product_id,
+                    success: true,
+                    error: String::new(),
+                },
                 Err(e) => {
                     all_success = false;
-                    BatchReserveStockResult { product_id, success: false, error: e.to_string() }
+                    BatchReserveStockResult {
+                        product_id,
+                        success: false,
+                        error: e.to_string(),
+                    }
                 }
-            }
-        }).collect();
+            })
+            .collect();
 
-        Ok(Response::new(BatchReserveStockResponse { all_success, results }))
+        Ok(Response::new(BatchReserveStockResponse {
+            all_success,
+            results,
+        }))
     }
 
     async fn batch_release_stock(
@@ -184,7 +209,11 @@ impl InventoryService for InventoryServiceImpl {
         request: Request<BatchReleaseStockRequest>,
     ) -> Result<Response<BatchReleaseStockResponse>, Status> {
         let req = request.into_inner();
-        let items: Vec<(u64, i32)> = req.items.iter().map(|i| (i.product_id, i.quantity)).collect();
+        let items: Vec<(u64, i32)> = req
+            .items
+            .iter()
+            .map(|i| (i.product_id, i.quantity))
+            .collect();
         let results = self.service.batch_release_stock(items).await;
 
         let all_success = results.iter().all(|(_, r)| r.is_ok());

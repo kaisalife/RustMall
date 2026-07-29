@@ -57,10 +57,7 @@ pub enum EventPayload {
         items: Vec<OrderItemEvent>,
     },
     /// 库存扣减
-    InventoryDeducted {
-        product_id: u64,
-        quantity: i64,
-    },
+    InventoryDeducted { product_id: u64, quantity: i64 },
     /// 应用日志（各服务发送到 Kafka，由 log-service 消费写入 PostgreSQL）
     AppLog {
         level: String,
@@ -149,7 +146,10 @@ mod tests {
             currency: "CNY".to_string(),
             channel: "WeChat".to_string(),
         };
-        assert_eq!(event.topic_name("simple_trade"), "simple_trade.payment_succeeded");
+        assert_eq!(
+            event.topic_name("simple_trade"),
+            "simple_trade.payment_succeeded"
+        );
     }
 
     #[test]

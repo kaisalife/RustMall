@@ -8,17 +8,14 @@
 use axum::{
     body::Body,
     http::{Request, StatusCode},
-    middleware,
-    routing,
-    Router,
+    middleware, routing, Router,
 };
 use std::sync::Arc;
 use tower::ServiceExt;
 
 use api_gateway::grpc_clients::GrpcClients;
 use api_gateway::routes::{
-    auth_routes, health_check_handler, inventory_routes, order_routes, product_routes,
-    user_routes,
+    auth_routes, health_check_handler, inventory_routes, order_routes, product_routes, user_routes,
 };
 use api_gateway::state::AppState;
 
@@ -53,6 +50,7 @@ fn make_test_state() -> Arc<AppState> {
             host: "127.0.0.1".to_string(),
             port: 8080,
             cors_origins: vec![],
+            grpc_timeout_seconds: 30,
         },
         auth_service: common::ServiceConfig {
             host: "127.0.0.1".to_string(),
@@ -103,6 +101,7 @@ fn make_test_state() -> Arc<AppState> {
             secret: "test_secret".to_string(),
             expiration_hours: 1,
             refresh_expiration_hours: 168,
+            bcrypt_cost: 10,
         },
         email: common::EmailConfig {
             smtp_host: "smtp.gmail.com".to_string(),
@@ -112,6 +111,7 @@ fn make_test_state() -> Arc<AppState> {
             from_address: "no-reply@test.com".to_string(),
         },
         tracing: common::TracingConfig::default(),
+        rate_limit: common::RateLimitConfig::default(),
         kafka: common::KafkaConfig {
             brokers: "localhost:9092".to_string(),
             topic_prefix: "simple_trade".to_string(),
@@ -119,7 +119,7 @@ fn make_test_state() -> Arc<AppState> {
         },
     };
 
-    Arc::new(AppState::new(config, clients, None))
+    Arc::new(AppState::new(config, clients, None, None))
 }
 
 /// 构建测试用 Router，模拟 api-gateway 的路由结构
@@ -133,6 +133,7 @@ fn build_test_app(state: Arc<AppState>) -> Router {
         .nest("/api/auth", auth_routes())
         .layer(middleware::from_fn(create_rate_limit_middleware(
             strict_limiter,
+            std::sync::Arc::new(vec![]),
         )));
 
     // 受保护路由（需要认证）
@@ -144,6 +145,7 @@ fn build_test_app(state: Arc<AppState>) -> Router {
         .layer(middleware::from_fn(create_auth_middleware(jwt_secret)))
         .layer(middleware::from_fn(create_rate_limit_middleware(
             default_limiter,
+            std::sync::Arc::new(vec![]),
         )));
 
     Router::new()

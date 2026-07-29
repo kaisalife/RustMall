@@ -1,6 +1,6 @@
+use crate::domain::{Order, OrderItem, OrderRepository, OrderStatus};
+use common::{AppError, AppResult, SnowflakeIdGenerator};
 use std::sync::Arc;
-use common::{AppResult, AppError, SnowflakeIdGenerator};
-use crate::domain::{Order, OrderItem, OrderStatus, OrderRepository};
 
 use super::dto::{OrderDto, OrderItemDto};
 
@@ -16,7 +16,11 @@ impl OrderApplicationService {
         order_repository: Arc<dyn OrderRepository>,
         id_generator: Arc<SnowflakeIdGenerator>,
     ) -> Self {
-        Self { order_repository, id_generator, event_producer: None }
+        Self {
+            order_repository,
+            id_generator,
+            event_producer: None,
+        }
     }
 
     pub fn with_event_producer(mut self, producer: event_bus::EventBusProducer) -> Self {
@@ -24,7 +28,11 @@ impl OrderApplicationService {
         self
     }
 
-    pub async fn create_order(&self, user_id: u64, items: Vec<OrderItemDto>) -> AppResult<OrderDto> {
+    pub async fn create_order(
+        &self,
+        user_id: u64,
+        items: Vec<OrderItemDto>,
+    ) -> AppResult<OrderDto> {
         if items.is_empty() {
             return Err(AppError::invalid_input("Order must have at least one item"));
         }
@@ -38,7 +46,9 @@ impl OrderApplicationService {
             })
             .collect();
 
-        let order_id = self.id_generator.generate()
+        let order_id = self
+            .id_generator
+            .generate()
             .map_err(|e| AppError::internal(e))?;
 
         let order = Order::new(order_id, user_id, order_items);
@@ -46,7 +56,9 @@ impl OrderApplicationService {
 
         // 发布 OrderCreated 事件（inventory-service 异步消费扣减库存）
         if let Some(ref producer) = self.event_producer {
-            let event_items: Vec<event_bus::OrderItemEvent> = saved_order.items.iter()
+            let event_items: Vec<event_bus::OrderItemEvent> = saved_order
+                .items
+                .iter()
                 .map(|i| event_bus::OrderItemEvent {
                     product_id: i.product_id,
                     quantity: i.quantity,
@@ -69,14 +81,25 @@ impl OrderApplicationService {
     }
 
     pub async fn get_order(&self, order_id: u64) -> AppResult<OrderDto> {
-        let order = self.order_repository.find_by_id(order_id).await?
+        let order = self
+            .order_repository
+            .find_by_id(order_id)
+            .await?
             .ok_or_else(|| AppError::not_found("Order not found"))?;
 
         Ok(Self::order_to_dto(order))
     }
 
-    pub async fn list_orders(&self, user_id: u64, page: i32, page_size: i32) -> AppResult<(Vec<OrderDto>, i32)> {
-        let (orders, total) = self.order_repository.list_by_user(user_id, page, page_size).await?;
+    pub async fn list_orders(
+        &self,
+        user_id: u64,
+        page: i32,
+        page_size: i32,
+    ) -> AppResult<(Vec<OrderDto>, i32)> {
+        let (orders, total) = self
+            .order_repository
+            .list_by_user(user_id, page, page_size)
+            .await?;
 
         let order_dtos = orders.into_iter().map(Self::order_to_dto).collect();
 
@@ -84,7 +107,10 @@ impl OrderApplicationService {
     }
 
     pub async fn update_order_status(&self, order_id: u64, status: String) -> AppResult<OrderDto> {
-        let mut order = self.order_repository.find_by_id(order_id).await?
+        let mut order = self
+            .order_repository
+            .find_by_id(order_id)
+            .await?
             .ok_or_else(|| AppError::not_found("Order not found"))?;
 
         match status.as_str() {
@@ -107,18 +133,23 @@ impl OrderApplicationService {
             OrderStatus::Shipped => "SHIPPED",
             OrderStatus::Completed => "COMPLETED",
             OrderStatus::Cancelled => "CANCELLED",
-        }.to_string();
+        }
+        .to_string();
 
         OrderDto {
             order_id: order.id,
             user_id: order.user_id,
             total_amount: order.total_amount,
             status,
-            items: order.items.into_iter().map(|i| OrderItemDto {
-                product_id: i.product_id,
-                quantity: i.quantity,
-                unit_price: i.unit_price,
-            }).collect(),
+            items: order
+                .items
+                .into_iter()
+                .map(|i| OrderItemDto {
+                    product_id: i.product_id,
+                    quantity: i.quantity,
+                    unit_price: i.unit_price,
+                })
+                .collect(),
             created_at: order.created_at.to_rfc3339(),
             updated_at: order.updated_at.to_rfc3339(),
         }

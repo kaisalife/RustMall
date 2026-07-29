@@ -8,10 +8,10 @@
 //! 基础设施层向上依赖 domain 层（实现 domain 定义的 trait），
 //! 不被 domain/application 层反向依赖，保证依赖方向单一。
 
+pub mod channels;
 pub mod database;
 pub mod repository;
-pub mod channels;
 
+pub use channels::{AlipayAdapter, PaymentChannelAdapter, StubChannelAdapter, WeChatPayAdapter};
 pub use database::PaymentDatabase;
-pub use repository::{PgPaymentRepository, PgTransactionRepository, PgRefundRepository};
-pub use channels::{PaymentChannelAdapter, StubChannelAdapter, WeChatPayAdapter, AlipayAdapter};
+pub use repository::{PgPaymentRepository, PgRefundRepository, PgTransactionRepository};

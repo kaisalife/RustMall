@@ -1,0 +1,47 @@
+# Loki 配置 - 单机模式（filesystem 存储）
+# 参考 Loki 2.x 标准配置
+
+auth_enabled: false  # 关闭多租户认证
+
+server:
+  http_listen_port: 3100   # Loki HTTP 监听端口
+  grpc_listen_port: 9096   # Loki gRPC 监听端口
+
+common:
+  path_prefix: /loki       # 数据存储前缀路径
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks   # chunks 存储目录
+      rules_directory: /loki/rules     # 规则存储目录
+  replication_factor: 1   # 单机模式，副本数为 1
+  ring:
+    kvstore:
+      store: inmemory      # 单机使用内存环，无需 etcd/consul
+
+# Schema 配置（TSDB 模式，v13 schema）
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+# 存储配置（TSDB shipper）
+storage_config:
+  tsdb_shipper:
+    active_index_directory: /loki/tsdb-shipper-active   # 活跃索引目录
+    cache_location: /loki/tsdb-shipper-cache            # 缓存目录
+
+# 采集与保留限制
+limits_config:
+  ingestion_rate_mb: 10        # 采集速率上限 10MB/s
+  ingestion_burst_size_mb: 20  # 突发采集上限 20MB
+  retention_period: 168h       # 日志保留 7 天
+
+# Compactor 配置（单机简化，不压缩旧 chunks，仅用于保留期清理）
+compactor:
+  working_directory: /loki/compactor
+  compaction_interval: 10m

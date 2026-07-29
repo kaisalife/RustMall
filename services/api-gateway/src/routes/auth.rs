@@ -82,7 +82,10 @@ async fn login_handler(
 
     // 写入缓存（TTL 30s，密码变更后 key 自然不同，无需显式失效）
     if let Some(ref cache) = state.cache {
-        if let Err(e) = cache.set_json(&cache_key, &dto, Duration::from_secs(30)).await {
+        if let Err(e) = cache
+            .set_json(&cache_key, &dto, Duration::from_secs(30))
+            .await
+        {
             tracing::warn!("Failed to write login to cache: {}", e);
         }
     }

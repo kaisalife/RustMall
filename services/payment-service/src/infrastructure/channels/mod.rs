@@ -9,17 +9,17 @@
 //! - `wechat`：微信支付适配器（框架，待实现）
 //! - `alipay`：支付宝适配器（框架，待实现）
 
+pub mod alipay;
 pub mod stub;
 pub mod wechat;
-pub mod alipay;
 
+pub use alipay::AlipayAdapter;
 pub use stub::StubChannelAdapter;
 pub use wechat::WeChatPayAdapter;
-pub use alipay::AlipayAdapter;
 
+use crate::domain::{Money, PaymentChannel};
 use async_trait::async_trait;
 use common::AppResult;
-use crate::domain::{Money, PaymentChannel};
 
 /// 支付渠道适配器 trait。
 ///

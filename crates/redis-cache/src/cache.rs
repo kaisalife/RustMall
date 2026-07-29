@@ -19,19 +19,32 @@ impl RedisCache {
         conn.get(key).await
     }
 
-    pub async fn set_string(&self, key: &str, value: &str, ttl: Duration) -> Result<(), redis::RedisError> {
+    pub async fn set_string(
+        &self,
+        key: &str,
+        value: &str,
+        ttl: Duration,
+    ) -> Result<(), redis::RedisError> {
         let mut conn = self.conn.clone();
         conn.set_ex(key, value, ttl.as_secs()).await
     }
 
-    pub async fn get_json<T: serde::de::DeserializeOwned>(&self, key: &str) -> Result<Option<T>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_json<T: serde::de::DeserializeOwned>(
+        &self,
+        key: &str,
+    ) -> Result<Option<T>, Box<dyn std::error::Error + Send + Sync>> {
         match self.get_string(key).await? {
             Some(val) => Ok(Some(serde_json::from_str(&val)?)),
             None => Ok(None),
         }
     }
 
-    pub async fn set_json<T: serde::Serialize>(&self, key: &str, value: &T, ttl: Duration) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn set_json<T: serde::Serialize>(
+        &self,
+        key: &str,
+        value: &T,
+        ttl: Duration,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let json = serde_json::to_string(value)?;
         self.set_string(key, &json, ttl).await?;
         Ok(())

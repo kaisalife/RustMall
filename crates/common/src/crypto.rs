@@ -15,10 +15,18 @@ pub struct Claims {
     pub iat: usize,
     /// Token 类型（区分 access token 和 refresh token）
     pub token_type: String,
+    /// 用户角色（默认 "user"），用于接口级权限控制
+    #[serde(default = "default_role")]
+    pub role: String,
+}
+
+/// Claims::role 的默认值，保证旧令牌（无 role 字段）解码时回退为 "user"
+fn default_role() -> String {
+    "user".to_string()
 }
 
 impl Claims {
-    pub fn new(user_id: u64, email: String, expiration_hours: i64) -> Self {
+    pub fn new(user_id: u64, email: String, expiration_hours: i64, role: String) -> Self {
         let now = Utc::now();
         let exp = now + Duration::hours(expiration_hours);
 
@@ -28,6 +36,7 @@ impl Claims {
             iat: now.timestamp() as usize,
             exp: exp.timestamp() as usize,
             token_type: "access".to_string(),
+            role,
         }
     }
 }
@@ -70,7 +79,8 @@ pub fn hash_password_with_cost(password: &str, cost: u32) -> AppResult<String> {
 }
 
 pub fn verify_password(password: &str, hash: &str) -> AppResult<bool> {
-    verify(password, hash).map_err(|e| AppError::internal(format!("Failed to verify password: {}", e)))
+    verify(password, hash)
+        .map_err(|e| AppError::internal(format!("Failed to verify password: {}", e)))
 }
 
 /// bcrypt 并发限流信号量：限制为 CPU 核心数，避免阻塞线程池过度订阅导致 CPU 抢占
@@ -79,7 +89,9 @@ static BCRYPT_SEMAPHORE: OnceLock<Semaphore> = OnceLock::new();
 
 fn bcrypt_semaphore() -> &'static Semaphore {
     BCRYPT_SEMAPHORE.get_or_init(|| {
-        let cpus = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
+        let cpus = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(4);
         Semaphore::new(cpus)
     })
 }
@@ -87,7 +99,9 @@ fn bcrypt_semaphore() -> &'static Semaphore {
 /// 在阻塞线程池中哈希密码（bcrypt 是 CPU 密集型，放到阻塞线程池执行，并用信号量限制并发为核心数）
 #[tracing::instrument(skip(password), fields(cost = cost))]
 pub async fn hash_password_async(password: String, cost: u32) -> AppResult<String> {
-    let _permit = bcrypt_semaphore().acquire().await
+    let _permit = bcrypt_semaphore()
+        .acquire()
+        .await
         .map_err(|e| AppError::internal(format!("Semaphore closed: {}", e)))?;
     tokio::task::spawn_blocking(move || hash_password_with_cost(&password, cost))
         .await
@@ -97,7 +111,9 @@ pub async fn hash_password_async(password: String, cost: u32) -> AppResult<Strin
 /// 在阻塞线程池中验证密码（同上，避免阻塞 tokio worker 线程）
 #[tracing::instrument(skip(password, hash))]
 pub async fn verify_password_async(password: String, hash: String) -> AppResult<bool> {
-    let _permit = bcrypt_semaphore().acquire().await
+    let _permit = bcrypt_semaphore()
+        .acquire()
+        .await
         .map_err(|e| AppError::internal(format!("Semaphore closed: {}", e)))?;
     tokio::task::spawn_blocking(move || verify_password(&password, &hash))
         .await
@@ -167,15 +183,23 @@ pub fn validate_jwt(token: &str, secret: &str) -> AppResult<Claims> {
 /// 生成 refresh token
 pub fn generate_refresh_token(claims: RefreshClaims, secret: &str) -> AppResult<String> {
     let header = Header::default();
-    encode(&header, &claims, &EncodingKey::from_secret(secret.as_bytes()))
-        .map_err(|e| AppError::internal(format!("Failed to generate refresh token: {}", e)))
+    encode(
+        &header,
+        &claims,
+        &EncodingKey::from_secret(secret.as_bytes()),
+    )
+    .map_err(|e| AppError::internal(format!("Failed to generate refresh token: {}", e)))
 }
 
 /// 验证 refresh token
 pub fn validate_refresh_token(token: &str, secret: &str) -> AppResult<RefreshClaims> {
-    decode::<RefreshClaims>(token, &DecodingKey::from_secret(secret.as_bytes()), &Validation::default())
-        .map(|data| data.claims)
-        .map_err(|e| AppError::Authentication(format!("Invalid refresh token: {}", e)))
+    decode::<RefreshClaims>(
+        token,
+        &DecodingKey::from_secret(secret.as_bytes()),
+        &Validation::default(),
+    )
+    .map(|data| data.claims)
+    .map_err(|e| AppError::Authentication(format!("Invalid refresh token: {}", e)))
 }
 
 #[cfg(test)]
@@ -194,7 +218,12 @@ mod tests {
     #[test]
     fn test_jwt_generate_and_validate() {
         let secret = "test_secret_key";
-        let claims = Claims::new(12345, "test@example.com".to_string(), 24);
+        let claims = Claims::new(
+            12345,
+            "test@example.com".to_string(),
+            24,
+            "user".to_string(),
+        );
 
         let token = generate_jwt(&claims, secret).unwrap();
         let validated_claims = validate_jwt(&token, secret).unwrap();
@@ -222,20 +251,14 @@ mod tests {
     fn test_validate_password_no_uppercase() {
         let result = validate_password("test1234");
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .message
-            .contains("uppercase letter"));
+        assert!(result.unwrap_err().message.contains("uppercase letter"));
     }
 
     #[test]
     fn test_validate_password_no_lowercase() {
         let result = validate_password("TEST1234");
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .message
-            .contains("lowercase letter"));
+        assert!(result.unwrap_err().message.contains("lowercase letter"));
     }
 
     #[test]

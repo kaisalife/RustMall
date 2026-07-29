@@ -61,18 +61,18 @@ impl EventBusProducer {
             .set("bootstrap.servers", brokers)
             // 长连接保活配置
             .set("connections.max.idle.ms", "540000") // 9分钟（小于 broker 的 10 分钟默认值）
-            .set("reconnect.backoff.ms", "1000")     // 重连初始退避
+            .set("reconnect.backoff.ms", "1000") // 重连初始退避
             .set("reconnect.backoff.max.ms", "10000") // 重连最大退避
             // 批量发送配置（吞吐优化）
-            .set("linger.ms", "10")                   // 等待 10ms 攒批
-            .set("batch.num.messages", "10000")       // 单批最大消息数
-            .set("batch.size", "1048576")             // 单批最大字节数（1MB）
+            .set("linger.ms", "10") // 等待 10ms 攒批
+            .set("batch.num.messages", "10000") // 单批最大消息数
+            .set("batch.size", "1048576") // 单批最大字节数（1MB）
             // 可靠性配置
-            .set("enable.idempotence", "true")        // 幂等 producer（防重复）
-            .set("acks", "all")                       // 等待所有副本确认
-            .set("message.timeout.ms", "30000")       // 发送超时 30s
+            .set("enable.idempotence", "true") // 幂等 producer（防重复）
+            .set("acks", "all") // 等待所有副本确认
+            .set("message.timeout.ms", "30000") // 发送超时 30s
             // 日志级别
-            .set("log.connection.close", "false")     // 不记录连接关闭日志（减少噪音）
+            .set("log.connection.close", "false") // 不记录连接关闭日志（减少噪音）
             .create()
             .map_err(|e| AppError::internal(format!("创建 Kafka producer 失败: {}", e)))?;
 

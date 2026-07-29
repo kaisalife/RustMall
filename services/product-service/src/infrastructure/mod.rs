@@ -1,5 +1,5 @@
-pub mod repository;
 pub mod database;
+pub mod repository;
 
-pub use repository::{ProductRepositoryImpl, CategoryRepositoryImpl};
 pub use database::DatabaseConnection;
+pub use repository::{CategoryRepositoryImpl, ProductRepositoryImpl};

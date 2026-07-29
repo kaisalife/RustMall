@@ -30,7 +30,9 @@ async fn create_order_handler(
     let mut inventory_client = state.clients.inventory.clone();
 
     // 步骤1: 批量预留库存（单次 gRPC 替代 N 次逐项调用）
-    let stock_items: Vec<proto::inventory::StockItem> = req.items.iter()
+    let stock_items: Vec<proto::inventory::StockItem> = req
+        .items
+        .iter()
         .map(|item| proto::inventory::StockItem {
             product_id: item.product_id,
             quantity: item.quantity,
@@ -38,9 +40,7 @@ async fn create_order_handler(
         .collect();
 
     let reserve_resp = inventory_client
-        .batch_reserve_stock(proto::inventory::BatchReserveStockRequest {
-            items: stock_items,
-        })
+        .batch_reserve_stock(proto::inventory::BatchReserveStockRequest { items: stock_items })
         .await
         .map_err(|e| {
             let app_err: AppError = e.into();
@@ -51,11 +51,15 @@ async fn create_order_handler(
     let reserve_inner = reserve_resp.into_inner();
     if !reserve_inner.all_success {
         // 部分预留失败，释放已成功的预留
-        let succeeded: std::collections::HashSet<u64> = reserve_inner.results.iter()
+        let succeeded: std::collections::HashSet<u64> = reserve_inner
+            .results
+            .iter()
             .filter(|r| r.success)
             .map(|r| r.product_id)
             .collect();
-        let release_items: Vec<proto::inventory::StockItem> = req.items.iter()
+        let release_items: Vec<proto::inventory::StockItem> = req
+            .items
+            .iter()
             .filter(|i| succeeded.contains(&i.product_id))
             .map(|i| proto::inventory::StockItem {
                 product_id: i.product_id,
@@ -69,11 +73,16 @@ async fn create_order_handler(
                 })
                 .await;
         }
-        let errors: Vec<_> = reserve_inner.results.iter()
+        let errors: Vec<_> = reserve_inner
+            .results
+            .iter()
             .filter(|r| !r.success)
             .map(|r| format!("product {}: {}", r.product_id, r.error))
             .collect();
-        return Err(AppError::invalid_input(format!("Insufficient stock: {}", errors.join("; "))));
+        return Err(AppError::invalid_input(format!(
+            "Insufficient stock: {}",
+            errors.join("; ")
+        )));
     }
 
     // 步骤2: 创建订单
@@ -107,7 +116,9 @@ async fn create_order_handler(
                 "Order creation failed, compensating by releasing reserved stock: {}",
                 app_err
             );
-            let release_items: Vec<proto::inventory::StockItem> = req.items.iter()
+            let release_items: Vec<proto::inventory::StockItem> = req
+                .items
+                .iter()
                 .map(|item| proto::inventory::StockItem {
                     product_id: item.product_id,
                     quantity: item.quantity,

@@ -1,6 +1,6 @@
-use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use crate::AppError;
+use std::sync::Mutex;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 // 雪花算法配置
 //可以用原子操作优化sequence的更新
@@ -27,7 +27,9 @@ struct SequenceState {
 impl SnowflakeIdGenerator {
     pub fn new(worker_id: u64) -> Result<Self, AppError> {
         if worker_id > MAX_WORKER_ID {
-            return Err(AppError::IdGenerationError("Worker ID exceeds maximum value".to_string()));
+            return Err(AppError::IdGenerationError(
+                "Worker ID exceeds maximum value".to_string(),
+            ));
         }
 
         Ok(Self {
@@ -40,12 +42,17 @@ impl SnowflakeIdGenerator {
     }
 
     pub fn generate(&self) -> Result<u64, AppError> {
-        let mut state = self.sequence.lock().map_err(|_| AppError::IdGenerationError("Mutex lock failed".to_string()))?;
+        let mut state = self
+            .sequence
+            .lock()
+            .map_err(|_| AppError::IdGenerationError("Mutex lock failed".to_string()))?;
 
         let mut timestamp = Self::get_timestamp();
 
         if timestamp < state.last_timestamp {
-            return Err(AppError::IdGenerationError("Clock moved backwards, refusing to generate ID".to_string()));
+            return Err(AppError::IdGenerationError(
+                "Clock moved backwards, refusing to generate ID".to_string(),
+            ));
         }
 
         if timestamp == state.last_timestamp {

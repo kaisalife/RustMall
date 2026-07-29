@@ -1,4 +1,7 @@
-use figment::{Figment, providers::{Toml, Env, Format}};
+use figment::{
+    providers::{Env, Format, Toml},
+    Figment,
+};
 use serde::Deserialize;
 
 use crate::error::{AppError, AppResult};
@@ -134,12 +137,15 @@ pub fn load_config() -> AppResult<AppConfig> {
         .merge(Toml::file("config/base.toml"))
         .merge(Env::prefixed("APP_").split("__"));
 
-    let config: AppConfig = figment.extract()
+    let config: AppConfig = figment
+        .extract()
         .map_err(|e| AppError::Config(format!("Failed to load config: {}", e)))?;
 
     // 安全校验：如果 JWT secret 是默认值，在非 debug 模式下警告
     if config.jwt.secret.contains("change-this-in-production") && !cfg!(debug_assertions) {
-        tracing::warn!("JWT secret appears to be the default value. Please change it in production!");
+        tracing::warn!(
+            "JWT secret appears to be the default value. Please change it in production!"
+        );
     }
 
     Ok(config)

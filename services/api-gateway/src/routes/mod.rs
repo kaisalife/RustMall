@@ -1,13 +1,15 @@
+pub mod audit;
 pub mod auth;
-pub mod product;
-pub mod order;
-pub mod inventory;
-pub mod health;
 pub mod bench;
+pub mod health;
+pub mod inventory;
+pub mod order;
+pub mod product;
 
+pub use audit::audit_routes;
 pub use auth::{auth_routes, user_routes};
-pub use product::product_routes;
-pub use order::order_routes;
-pub use inventory::inventory_routes;
+pub use bench::{echo_handler, ping_handler};
 pub use health::health_check_handler;
-pub use bench::{ping_handler, echo_handler};
+pub use inventory::inventory_routes;
+pub use order::order_routes;
+pub use product::product_routes;

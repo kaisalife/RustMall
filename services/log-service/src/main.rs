@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio_stream::StreamExt;
 
-use common::{load_config, init_tracing, create_pool};
+use common::{create_pool, init_tracing, load_config};
 use event_bus::consumer::parse_event;
 use event_bus::{EventEnvelope, EventPayload};
 
@@ -22,14 +22,20 @@ const FLUSH_INTERVAL: Duration = Duration::from_secs(2);
 async fn main() {
     let config = load_config().expect("Failed to load config");
 
-    common::init_tracing("log-service", config.tracing.otlp_endpoint.as_deref(), "log_service=info");
+    common::init_tracing(
+        "log-service",
+        config.tracing.otlp_endpoint.as_deref(),
+        "log_service=info",
+    );
 
     tracing::info!("========================================");
     tracing::info!("  Simple Trade - Log Service");
     tracing::info!("========================================");
 
     // 初始化数据库（连接 + 迁移）
-    let pool = db_migration::setup_database(&config.database).await.expect("Failed to setup database");
+    let pool = db_migration::setup_database(&config.database)
+        .await
+        .expect("Failed to setup database");
     tracing::info!("Database connected, migrations applied");
 
     // 初始化 Kafka 消费者
@@ -94,8 +100,8 @@ async fn main() {
         }
 
         // 检查是否需要刷新
-        let should_flush_size = app_log_batch.len() >= BATCH_SIZE
-            || audit_log_batch.len() >= BATCH_SIZE;
+        let should_flush_size =
+            app_log_batch.len() >= BATCH_SIZE || audit_log_batch.len() >= BATCH_SIZE;
         let should_flush_time = last_flush.elapsed() >= FLUSH_INTERVAL
             && (!app_log_batch.is_empty() || !audit_log_batch.is_empty());
 

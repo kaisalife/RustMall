@@ -2,8 +2,8 @@
 //!
 //! 测试单线程批量生成 ID 的吞吐量。
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use common::SnowflakeIdGenerator;
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
 fn bench_generate_id(c: &mut Criterion) {
     let generator = SnowflakeIdGenerator::new(1).unwrap();

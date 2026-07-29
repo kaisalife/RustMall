@@ -1,19 +1,13 @@
 //! 请求日志中间件
 
-use axum::{
-    http::Request,
-    middleware::Next,
-    response::Response,
-    http::StatusCode,
-    body::Body,
-};
-use tracing::{info, warn, error, Instrument, Level};
+use axum::{body::Body, http::Request, http::StatusCode, middleware::Next, response::Response};
 use std::time::Instant;
+use tracing::{error, info, warn, Instrument, Level};
 
-use common::request_context::{RequestId, REQUEST_ID_HEADER, inject_response_id};
+use common::request_context::{inject_response_id, RequestId, REQUEST_ID_HEADER};
 
 /// 日志中间件
-/// 
+///
 /// 记录每个请求的：
 /// - 请求方法
 /// - 请求路径
@@ -30,7 +24,9 @@ pub async fn logger_middleware(mut request: Request<Body>, next: Next) -> Respon
     let request_id = uuid::Uuid::new_v4().to_string();
 
     // 注入到请求扩展（审计中间件和 handler 可读取）
-    request.extensions_mut().insert(RequestId(request_id.clone()));
+    request
+        .extensions_mut()
+        .insert(RequestId(request_id.clone()));
 
     let span = tracing::span!(
         Level::INFO,
@@ -49,7 +45,10 @@ pub async fn logger_middleware(mut request: Request<Body>, next: Next) -> Respon
         let status = response.status();
 
         match status {
-            StatusCode::OK | StatusCode::CREATED | StatusCode::ACCEPTED | StatusCode::NO_CONTENT => {
+            StatusCode::OK
+            | StatusCode::CREATED
+            | StatusCode::ACCEPTED
+            | StatusCode::NO_CONTENT => {
                 info!(
                     method = %method,
                     path = %path,
@@ -58,7 +57,10 @@ pub async fn logger_middleware(mut request: Request<Body>, next: Next) -> Respon
                     "<- OUT"
                 );
             }
-            StatusCode::BAD_REQUEST | StatusCode::NOT_FOUND | StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
+            StatusCode::BAD_REQUEST
+            | StatusCode::NOT_FOUND
+            | StatusCode::UNAUTHORIZED
+            | StatusCode::FORBIDDEN => {
                 warn!(
                     method = %method,
                     path = %path,
@@ -164,7 +166,11 @@ pub fn create_cors_layer(allowed_origins: Vec<String>) -> tower_http::cors::Cors
     if origins.is_empty() {
         // 如果没有配置，默认只允许 localhost
         return tower_http::cors::CorsLayer::new()
-            .allow_origin("http://localhost:3000".parse::<axum::http::HeaderValue>().unwrap())
+            .allow_origin(
+                "http://localhost:3000"
+                    .parse::<axum::http::HeaderValue>()
+                    .unwrap(),
+            )
             .allow_methods(methods)
             .allow_headers(headers)
             .max_age(std::time::Duration::from_secs(3600));

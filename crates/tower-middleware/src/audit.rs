@@ -12,12 +12,7 @@
 //!     .layer(AuditLayer::new(producer));
 //! ```
 
-use axum::{
-    body::Body,
-    extract::Request,
-    http::Method,
-    response::Response,
-};
+use axum::{body::Body, extract::Request, http::Method, response::Response};
 use common::request_context::RequestId;
 
 /// gRPC metadata 中 request_id 的 key
@@ -60,9 +55,14 @@ where
 {
     type Response = S::Response;
     type Error = S::Error;
-    type Future = std::pin::Pin<Box<dyn std::future::Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+    type Future = std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Self::Response, Self::Error>> + Send>,
+    >;
 
-    fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> std::task::Poll<Result<(), Self::Error>> {
+    fn poll_ready(
+        &mut self,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
     }
 
@@ -82,15 +82,24 @@ where
                 .map(|rid| rid.0.clone());
 
             // 只审计写操作
-            let should_audit = matches!(method, Method::POST | Method::PUT | Method::DELETE | Method::PATCH);
+            let should_audit = matches!(
+                method,
+                Method::POST | Method::PUT | Method::DELETE | Method::PATCH
+            );
 
             // 提取请求信息
-            let user_id = extract_user_id(headers.get("authorization").and_then(|v| v.to_str().ok()));
+            let user_id =
+                extract_user_id(headers.get("authorization").and_then(|v| v.to_str().ok()));
             let ip_address = headers
                 .get("x-forwarded-for")
                 .and_then(|v| v.to_str().ok())
                 .map(|s| s.split(',').next().unwrap_or("").trim().to_string())
-                .or_else(|| headers.get("x-real-ip").and_then(|v| v.to_str().ok()).map(|s| s.to_string()));
+                .or_else(|| {
+                    headers
+                        .get("x-real-ip")
+                        .and_then(|v| v.to_str().ok())
+                        .map(|s| s.to_string())
+                });
             let user_agent = headers
                 .get("user-agent")
                 .and_then(|v| v.to_str().ok())
@@ -103,7 +112,11 @@ where
             if should_audit {
                 if let Some(ref producer) = producer {
                     let status = response.status();
-                    let status_str = if status.is_success() { "success" } else { "failure" };
+                    let status_str = if status.is_success() {
+                        "success"
+                    } else {
+                        "failure"
+                    };
                     let action = format!("{} {}", method, path);
                     let resource_type = path.split('/').nth(2).map(|s| s.to_string());
 

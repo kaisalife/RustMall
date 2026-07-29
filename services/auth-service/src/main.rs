@@ -1,12 +1,12 @@
+mod application;
 mod domain;
 mod infrastructure;
-mod application;
 mod interface;
 
-use std::sync::Arc;
 use std::env;
+use std::sync::Arc;
 
-use common::{load_config, init_tracing, SnowflakeIdGenerator};
+use common::{init_tracing, load_config, SnowflakeIdGenerator};
 use infrastructure::{DatabaseConnection, UserRepositoryImpl};
 use interface::AuthServiceImpl;
 use proto::auth::auth_service_server::AuthServiceServer;
@@ -47,14 +47,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Initialize ID generator
-    let id_generator = Arc::new(SnowflakeIdGenerator::new(config.auth_service.worker_id)
-        .expect("Failed to create ID generator"));
+    let id_generator = Arc::new(
+        SnowflakeIdGenerator::new(config.auth_service.worker_id)
+            .expect("Failed to create ID generator"),
+    );
 
     // Initialize repositories
     let user_repository = Arc::new(UserRepositoryImpl::new(db.pool().clone()));
 
     // Initialize email service client
-    let email_client = match infrastructure::EmailServiceClientWrapper::new(config.email_service.address()).await {
+    let email_client = match infrastructure::EmailServiceClientWrapper::new(
+        config.email_service.address(),
+    )
+    .await
+    {
         Ok(client) => Some(client),
         Err(e) => {
             tracing::warn!("Failed to connect to email service: {}", e);

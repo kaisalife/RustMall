@@ -1,0 +1,20 @@
+# Prometheus 采集配置
+# 保留 15 天通过 docker-compose 命令行参数配置：
+#   --storage.tsdb.retention.time=15d
+
+global:
+  scrape_interval: 15s       # 采集间隔
+  evaluation_interval: 15s   # 规则评估间隔
+
+# 采集目标
+scrape_configs:
+  # api-gateway 暴露 /metrics 端点（Prometheus 格式）
+  - job_name: 'api-gateway'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['api-gateway:8080']
+        labels:
+          service: api-gateway
+
+  # 各 gRPC 服务暂未暴露 /metrics 端点，故不采集
+  # 后续可通过添加 metrics 端点后在此扩展采集目标

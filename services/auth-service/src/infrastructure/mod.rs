@@ -1,7 +1,7 @@
 mod database;
-mod repository;
 mod email_client;
+mod repository;
 
 pub use database::DatabaseConnection;
-pub use repository::UserRepositoryImpl;
 pub use email_client::EmailServiceClientWrapper;
+pub use repository::UserRepositoryImpl;

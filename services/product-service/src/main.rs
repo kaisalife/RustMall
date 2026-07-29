@@ -1,12 +1,12 @@
+mod application;
 mod domain;
 mod infrastructure;
-mod application;
 mod interface;
 
 use std::sync::Arc;
 
-use common::{load_config, init_tracing, SnowflakeIdGenerator};
-use infrastructure::{DatabaseConnection, ProductRepositoryImpl, CategoryRepositoryImpl};
+use common::{init_tracing, load_config, SnowflakeIdGenerator};
+use infrastructure::{CategoryRepositoryImpl, DatabaseConnection, ProductRepositoryImpl};
 use interface::ProductServiceImpl;
 use proto::product::product_service_server::ProductServiceServer;
 use tonic::transport::Server;
@@ -23,7 +23,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "product_service=debug,tonic=info",
     );
 
-    let addr = format!("{}:{}", config.product_service.host, config.product_service.port).parse()?;
+    let addr = format!(
+        "{}:{}",
+        config.product_service.host, config.product_service.port
+    )
+    .parse()?;
 
     tracing::info!("Product Service starting on {}", addr);
 
@@ -31,7 +35,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = DatabaseConnection::new(&config.database).await?;
 
     // 初始化ID生成器
-    let id_generator = Arc::new(SnowflakeIdGenerator::new(config.product_service.worker_id).expect("Failed to create ID generator"));
+    let id_generator = Arc::new(
+        SnowflakeIdGenerator::new(config.product_service.worker_id)
+            .expect("Failed to create ID generator"),
+    );
 
     // 初始化仓储
     let product_repository = Arc::new(ProductRepositoryImpl::new(db.pool().clone()));

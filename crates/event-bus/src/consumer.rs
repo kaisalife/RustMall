@@ -49,16 +49,16 @@ impl EventBusConsumer {
             .set("bootstrap.servers", brokers)
             .set("group.id", group_id)
             // 长连接保活配置
-            .set("session.timeout.ms", "30000")       // 心跳超时 30s
-            .set("heartbeat.interval.ms", "10000")    // 心跳间隔 10s
+            .set("session.timeout.ms", "30000") // 心跳超时 30s
+            .set("heartbeat.interval.ms", "10000") // 心跳间隔 10s
             .set("connections.max.idle.ms", "540000") // 空闲超时 9 分钟
             // 消费者组配置
-            .set("auto.offset.reset", "latest")       // 新消费者从最新消息开始
-            .set("enable.auto.commit", "true")        // 自动提交 offset
-            .set("auto.commit.interval.ms", "5000")   // 每 5s 提交一次
+            .set("auto.offset.reset", "latest") // 新消费者从最新消息开始
+            .set("enable.auto.commit", "true") // 自动提交 offset
+            .set("auto.commit.interval.ms", "5000") // 每 5s 提交一次
             // 读取配置
-            .set("fetch.min.bytes", "1")              // 最少拉取 1 字节
-            .set("fetch.max.wait.ms", "500")          // 最大等待 500ms
+            .set("fetch.min.bytes", "1") // 最少拉取 1 字节
+            .set("fetch.max.wait.ms", "500") // 最大等待 500ms
             // 分区分配策略
             .set("partition.assignment.strategy", "roundrobin") // 轮询分配
             .create()
@@ -102,19 +102,18 @@ impl EventBusConsumer {
     ///     }
     /// }
     /// ```
-    pub fn stream(&self) -> impl tokio_stream::Stream<Item = Result<rdkafka::message::BorrowedMessage<'_>, rdkafka::error::KafkaError>> {
+    pub fn stream(
+        &self,
+    ) -> impl tokio_stream::Stream<
+        Item = Result<rdkafka::message::BorrowedMessage<'_>, rdkafka::error::KafkaError>,
+    > {
         self.consumer.stream()
     }
 
     /// 手动提交 offset（关闭 auto.commit 时使用）
     ///
     /// `partition`/`offset`: 提交到指定位置
-    pub async fn commit_offset(
-        &self,
-        topic: &str,
-        partition: i32,
-        offset: i64,
-    ) -> AppResult<()> {
+    pub async fn commit_offset(&self, topic: &str, partition: i32, offset: i64) -> AppResult<()> {
         use rdkafka::TopicPartitionList;
 
         let mut tpl = TopicPartitionList::new();
