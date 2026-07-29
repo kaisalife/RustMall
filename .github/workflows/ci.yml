@@ -1,5 +1,4 @@
 # CI 工作流
-# 流程：代码格式检查 -> Clippy 静态分析 -> 单元测试 -> 安全审计 -> Release 编译
 name: CI
 
 on:
@@ -31,7 +30,24 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Run clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings 2>&1 || { echo "::error::Clippy failed, see log above"; exit 1; }
+        run: |
+          output=$(cargo clippy --workspace --all-targets -- -D warnings 2>&1)
+          status=$?
+          if [ $status -ne 0 ]; then
+            echo "$output" > /tmp/clippy_error.txt
+            # Truncate to 65000 chars for GitHub issue body limit
+            head -c 65000 /tmp/clippy_error.txt > /tmp/clippy_truncated.txt
+            # Create GitHub issue with error output
+            curl -s -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/${{ github.repository }}/issues \
+              -d "$(jq -n --arg title "CI Lint Failure (${{ github.sha }})" \
+                       --arg body "$(cat /tmp/clippy_truncated.txt)" \
+                       '{title: $title, body: ("```\n" + $body + "\n```"), labels: ["ci-failure"]}')"
+            echo "::error::Clippy failed. Issue created with error details."
+            exit 1
+          fi
 
   test:
     name: Test
@@ -47,7 +63,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler libprotobuf-dev libssl-dev pkg-config libpq-dev
       - name: Run tests
-        run: cargo test --workspace --verbose 2>&1 || { echo "::error::Tests failed, see log above"; exit 1; }
+        run: |
+          output=$(cargo test --workspace --verbose 2>&1)
+          status=$?
+          if [ $status -ne 0 ]; then
+            echo "$output" > /tmp/test_error.txt
+            head -c 65000 /tmp/test_error.txt > /tmp/test_truncated.txt
+            curl -s -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/${{ github.repository }}/issues \
+              -d "$(jq -n --arg title "CI Test Failure (${{ github.sha }})" \
+                       --arg body "$(cat /tmp/test_truncated.txt)" \
+                       '{title: $title, body: ("```\n" + $body + "\n```"), labels: ["ci-failure"]}')"
+            echo "::error::Tests failed. Issue created with error details."
+            exit 1
+          fi
 
   security:
     name: Security audit
