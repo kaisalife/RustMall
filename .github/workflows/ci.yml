@@ -26,7 +26,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler libprotobuf-dev libssl-dev pkg-config libpq-dev
+          sudo apt-get install -y protobuf-compiler libprotobuf-dev libssl-dev pkg-config libpq-dev libcurl4-openssl-dev libsasl2-dev zlib1g-dev libzstd-dev cmake
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Run clippy
@@ -61,7 +61,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler libprotobuf-dev libssl-dev pkg-config libpq-dev
+          sudo apt-get install -y protobuf-compiler libprotobuf-dev libssl-dev pkg-config libpq-dev libcurl4-openssl-dev libsasl2-dev zlib1g-dev libzstd-dev cmake
       - name: Run tests
         run: |
           output=$(cargo test --workspace --verbose 2>&1)
@@ -104,6 +104,6 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler libprotobuf-dev libssl-dev pkg-config libpq-dev
+          sudo apt-get install -y protobuf-compiler libprotobuf-dev libssl-dev pkg-config libpq-dev libcurl4-openssl-dev libsasl2-dev zlib1g-dev libzstd-dev cmake
       - name: Build release
         run: cargo build --release --workspace
