@@ -27,6 +27,7 @@ use proto::product::product_service_client::ProductServiceClient;
 
 use tower_middleware::auth::create_auth_middleware;
 use tower_middleware::rate_limit::{create_default_rate_limiter, create_rate_limit_middleware};
+use tower_middleware::TraceContextInjector;
 
 /// 创建懒连接的 gRPC Channel（不实际连接，仅在调用时才尝试连接）
 fn make_lazy_channel() -> tonic::transport::Channel {
@@ -40,10 +41,10 @@ fn make_test_state() -> Arc<AppState> {
     let channel = make_lazy_channel();
 
     let clients = GrpcClients {
-        auth: AuthServiceClient::new(channel.clone()),
-        product: ProductServiceClient::new(channel.clone()),
-        order: OrderServiceClient::new(channel.clone()),
-        inventory: InventoryServiceClient::new(channel),
+        auth: AuthServiceClient::with_interceptor(channel.clone(), TraceContextInjector),
+        product: ProductServiceClient::with_interceptor(channel.clone(), TraceContextInjector),
+        order: OrderServiceClient::with_interceptor(channel.clone(), TraceContextInjector),
+        inventory: InventoryServiceClient::with_interceptor(channel, TraceContextInjector),
         auth_cb: CircuitBreaker::default_cb(),
         product_cb: CircuitBreaker::default_cb(),
         order_cb: CircuitBreaker::default_cb(),

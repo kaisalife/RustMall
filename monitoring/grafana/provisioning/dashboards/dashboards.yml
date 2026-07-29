@@ -1,0 +1,19 @@
+# Grafana 仪表盘自动导入配置
+# 通过 provisioning 机制自动加载 monitoring/grafana/dashboards 下的 JSON 仪表盘。
+#
+# 注意：需要 docker-compose.yml 中 grafana 服务挂载本目录与仪表盘目录：
+#   - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+#   - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+apiVersion: 1
+
+providers:
+  - name: 'Simple Trade Dashboards'
+    orgId: 1
+    folder: 'Simple Trade'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

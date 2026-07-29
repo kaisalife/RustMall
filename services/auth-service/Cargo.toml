@@ -23,6 +23,7 @@ common = { path = "../../crates/common" }
 proto = { path = "../../crates/proto" }
 db-migration = { path = "../../crates/db-migration" }
 service-discovery = { path = "../../crates/service-discovery" }
+tower-middleware = { path = "../../crates/tower-middleware" }
 
 [[bin]]
 name = "auth-service"

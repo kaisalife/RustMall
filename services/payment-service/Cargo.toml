@@ -20,10 +20,12 @@ rust_decimal.workspace = true
 rust_decimal_macros.workspace = true
 
 common = { path = "../../crates/common" }
+db-migration = { path = "../../crates/db-migration" }
 proto = { path = "../../crates/proto" }
 idempotency = { path = "../../crates/idempotency" }
 event-bus = { path = "../../crates/event-bus" }
 service-discovery = { path = "../../crates/service-discovery" }
+tower-middleware = { path = "../../crates/tower-middleware" }
 
 [[bin]]
 name = "payment-service"

@@ -56,10 +56,7 @@ impl AuthApplicationService {
             hash_password_async(command.password.clone(), self.jwt_config.bcrypt_cost).await?;
 
         // 生成用户ID
-        let user_id = self
-            .id_generator
-            .generate()
-            .map_err(AppError::internal)?;
+        let user_id = self.id_generator.generate().map_err(AppError::internal)?;
 
         // 创建用户实体
         let user = User::new(

@@ -46,10 +46,7 @@ impl OrderApplicationService {
             })
             .collect();
 
-        let order_id = self
-            .id_generator
-            .generate()
-            .map_err(AppError::internal)?;
+        let order_id = self.id_generator.generate().map_err(AppError::internal)?;
 
         let order = Order::new(order_id, user_id, order_items);
         let saved_order = self.order_repository.create(order).await?;

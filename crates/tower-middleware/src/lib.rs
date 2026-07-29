@@ -9,6 +9,7 @@
 
 pub mod audit;
 pub mod auth;
+pub mod grpc_trace;
 pub mod idempotency;
 pub mod logger;
 pub mod rate_limit;
@@ -18,6 +19,7 @@ pub use auth::{
     create_auth_middleware, create_optional_auth_middleware, get_user_claims, AuthError,
     JwtValidator,
 };
+pub use grpc_trace::{TraceContextExtractor, TraceContextInjector, TracedChannel};
 pub use idempotency::{idempotency_middleware, IDEMPOTENCY_HEADER};
 pub use logger::{create_cors_layer, logger_middleware, verbose_logger_middleware};
 pub use rate_limit::{

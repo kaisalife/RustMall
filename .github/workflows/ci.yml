@@ -3,6 +3,8 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch: # 仅手动触发（GitHub Actions 界面点击 Run workflow）
   schedule:
     - cron: "0 2 * * *" # 每天凌晨 2 点定时执行（夜间全量检查）

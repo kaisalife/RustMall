@@ -86,11 +86,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     config.email_service.port,
                 );
                 if let Err(e) = registry.register(instance).await {
-                    tracing::warn!("Failed to register to Nacos: {}, service will start anyway", e);
+                    tracing::warn!(
+                        "Failed to register to Nacos: {}, service will start anyway",
+                        e
+                    );
                 }
             }
             Err(e) => {
-                tracing::warn!("Failed to connect to Nacos: {}, service will start anyway", e);
+                tracing::warn!(
+                    "Failed to connect to Nacos: {}, service will start anyway",
+                    e
+                );
             }
         }
     }

@@ -19,7 +19,7 @@ mod interface;
 
 use std::sync::Arc;
 
-use common::{create_pool, init_tracing, load_config, AppError, SnowflakeIdGenerator};
+use common::{init_tracing, load_config, AppError, SnowflakeIdGenerator};
 use infrastructure::{
     PaymentChannelAdapter, PaymentDatabase, PgPaymentRepository, PgRefundRepository,
     PgTransactionRepository, StubChannelAdapter,
@@ -52,8 +52,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Payment Service starting on {}", addr);
 
-    // 3. 创建数据库连接池，并包装为 PaymentDatabase
-    let pool = create_pool(&config.database).await?;
+    // 3. 创建数据库连接池（含自动迁移），并包装为 PaymentDatabase
+    let pool = db_migration::setup_database(&config.database).await?;
     let db = PaymentDatabase::new(pool);
 
     // 4. 依赖注入
@@ -99,18 +99,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     config.payment_service.port,
                 );
                 if let Err(e) = registry.register(instance).await {
-                    tracing::warn!("Failed to register to Nacos: {}, service will start anyway", e);
+                    tracing::warn!(
+                        "Failed to register to Nacos: {}, service will start anyway",
+                        e
+                    );
                 }
             }
             Err(e) => {
-                tracing::warn!("Failed to connect to Nacos: {}, service will start anyway", e);
+                tracing::warn!(
+                    "Failed to connect to Nacos: {}, service will start anyway",
+                    e
+                );
             }
         }
     }
 
     // 5. 启动 gRPC server，注册优雅关闭
     Server::builder()
-        .add_service(PaymentServiceServer::new(payment_service_impl))
+        .add_service(PaymentServiceServer::with_interceptor(
+            payment_service_impl,
+            tower_middleware::TraceContextExtractor,
+        ))
         .serve_with_shutdown(addr, shutdown_signal())
         .await?;
 

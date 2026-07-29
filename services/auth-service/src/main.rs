@@ -97,18 +97,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     config.auth_service.port,
                 );
                 if let Err(e) = registry.register(instance).await {
-                    tracing::warn!("Failed to register to Nacos: {}, service will start anyway", e);
+                    tracing::warn!(
+                        "Failed to register to Nacos: {}, service will start anyway",
+                        e
+                    );
                 }
             }
             Err(e) => {
-                tracing::warn!("Failed to connect to Nacos: {}, service will start anyway", e);
+                tracing::warn!(
+                    "Failed to connect to Nacos: {}, service will start anyway",
+                    e
+                );
             }
         }
     }
 
     // Start serving
     Server::builder()
-        .add_service(AuthServiceServer::new(auth_service_impl))
+        .add_service(AuthServiceServer::with_interceptor(
+            auth_service_impl,
+            tower_middleware::TraceContextExtractor,
+        ))
         .serve_with_shutdown(addr, shutdown_signal())
         .await?;
 

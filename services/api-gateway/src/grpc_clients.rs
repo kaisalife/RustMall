@@ -17,6 +17,7 @@ use proto::order::order_service_client::OrderServiceClient;
 use proto::product::product_service_client::ProductServiceClient;
 
 use service_discovery::{NacosRegistry, ServiceRegistry};
+use tower_middleware::{TraceContextInjector, TracedChannel};
 
 use crate::circuit_breaker::CircuitBreaker;
 
@@ -41,13 +42,13 @@ pub struct StaticAddrs {
 #[derive(Clone)]
 pub struct GrpcClients {
     /// 认证服务客户端
-    pub auth: AuthServiceClient<Channel>,
+    pub auth: AuthServiceClient<TracedChannel>,
     /// 商品服务客户端
-    pub product: ProductServiceClient<Channel>,
+    pub product: ProductServiceClient<TracedChannel>,
     /// 订单服务客户端
-    pub order: OrderServiceClient<Channel>,
+    pub order: OrderServiceClient<TracedChannel>,
     /// 库存服务客户端
-    pub inventory: InventoryServiceClient<Channel>,
+    pub inventory: InventoryServiceClient<TracedChannel>,
     /// 认证服务熔断器
     pub auth_cb: CircuitBreaker,
     /// 商品服务熔断器
@@ -181,10 +182,13 @@ impl GrpcClients {
             create_channel_from_nacos(registry, "inventory-service", grpc_timeout).await?;
 
         Ok(Self {
-            auth: AuthServiceClient::new(auth_channel),
-            product: ProductServiceClient::new(product_channel),
-            order: OrderServiceClient::new(order_channel),
-            inventory: InventoryServiceClient::new(inventory_channel),
+            auth: AuthServiceClient::with_interceptor(auth_channel, TraceContextInjector),
+            product: ProductServiceClient::with_interceptor(product_channel, TraceContextInjector),
+            order: OrderServiceClient::with_interceptor(order_channel, TraceContextInjector),
+            inventory: InventoryServiceClient::with_interceptor(
+                inventory_channel,
+                TraceContextInjector,
+            ),
             auth_cb: CircuitBreaker::default_cb(),
             product_cb: CircuitBreaker::default_cb(),
             order_cb: CircuitBreaker::default_cb(),
@@ -203,10 +207,13 @@ impl GrpcClients {
         let inventory_channel = create_channel(&addrs.inventory, grpc_timeout).await?;
 
         Ok(Self {
-            auth: AuthServiceClient::new(auth_channel),
-            product: ProductServiceClient::new(product_channel),
-            order: OrderServiceClient::new(order_channel),
-            inventory: InventoryServiceClient::new(inventory_channel),
+            auth: AuthServiceClient::with_interceptor(auth_channel, TraceContextInjector),
+            product: ProductServiceClient::with_interceptor(product_channel, TraceContextInjector),
+            order: OrderServiceClient::with_interceptor(order_channel, TraceContextInjector),
+            inventory: InventoryServiceClient::with_interceptor(
+                inventory_channel,
+                TraceContextInjector,
+            ),
             auth_cb: CircuitBreaker::default_cb(),
             product_cb: CircuitBreaker::default_cb(),
             order_cb: CircuitBreaker::default_cb(),
@@ -224,7 +231,7 @@ impl GrpcClients {
     /// 仅服务级错误（Unavailable/DeadlineExceeded/Internal）计入熔断。
     pub async fn call_auth<F, Fut, T>(&self, f: F) -> Result<T, tonic::Status>
     where
-        F: FnOnce(AuthServiceClient<Channel>) -> Fut,
+        F: FnOnce(AuthServiceClient<TracedChannel>) -> Fut,
         Fut: Future<Output = Result<T, tonic::Status>>,
     {
         if !self.auth_cb.can_proceed() {
@@ -250,7 +257,7 @@ impl GrpcClients {
     /// 执行带熔断器保护的 product 服务调用
     pub async fn call_product<F, Fut, T>(&self, f: F) -> Result<T, tonic::Status>
     where
-        F: FnOnce(ProductServiceClient<Channel>) -> Fut,
+        F: FnOnce(ProductServiceClient<TracedChannel>) -> Fut,
         Fut: Future<Output = Result<T, tonic::Status>>,
     {
         if !self.product_cb.can_proceed() {
@@ -276,7 +283,7 @@ impl GrpcClients {
     /// 执行带熔断器保护的 order 服务调用
     pub async fn call_order<F, Fut, T>(&self, f: F) -> Result<T, tonic::Status>
     where
-        F: FnOnce(OrderServiceClient<Channel>) -> Fut,
+        F: FnOnce(OrderServiceClient<TracedChannel>) -> Fut,
         Fut: Future<Output = Result<T, tonic::Status>>,
     {
         if !self.order_cb.can_proceed() {
@@ -302,7 +309,7 @@ impl GrpcClients {
     /// 执行带熔断器保护的 inventory 服务调用
     pub async fn call_inventory<F, Fut, T>(&self, f: F) -> Result<T, tonic::Status>
     where
-        F: FnOnce(InventoryServiceClient<Channel>) -> Fut,
+        F: FnOnce(InventoryServiceClient<TracedChannel>) -> Fut,
         Fut: Future<Output = Result<T, tonic::Status>>,
     {
         if !self.inventory_cb.can_proceed() {

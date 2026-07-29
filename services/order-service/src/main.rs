@@ -79,17 +79,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     config.order_service.port,
                 );
                 if let Err(e) = registry.register(instance).await {
-                    tracing::warn!("Failed to register to Nacos: {}, service will start anyway", e);
+                    tracing::warn!(
+                        "Failed to register to Nacos: {}, service will start anyway",
+                        e
+                    );
                 }
             }
             Err(e) => {
-                tracing::warn!("Failed to connect to Nacos: {}, service will start anyway", e);
+                tracing::warn!(
+                    "Failed to connect to Nacos: {}, service will start anyway",
+                    e
+                );
             }
         }
     }
 
     Server::builder()
-        .add_service(OrderServiceServer::new(order_service_impl))
+        .add_service(OrderServiceServer::with_interceptor(
+            order_service_impl,
+            tower_middleware::TraceContextExtractor,
+        ))
         .serve_with_shutdown(addr, shutdown_signal())
         .await?;
 

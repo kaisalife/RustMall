@@ -1,4 +1,4 @@
-use common::{create_pool, AppResult, DatabaseConfig};
+use common::{AppResult, DatabaseConfig};
 
 #[derive(Clone)]
 pub struct DatabaseConnection {
@@ -7,7 +7,8 @@ pub struct DatabaseConnection {
 
 impl DatabaseConnection {
     pub async fn new(config: &DatabaseConfig) -> AppResult<Self> {
-        let pool = create_pool(config).await?;
+        // 创建连接池并自动执行数据库迁移
+        let pool = db_migration::setup_database(config).await?;
         Ok(Self { pool })
     }
 

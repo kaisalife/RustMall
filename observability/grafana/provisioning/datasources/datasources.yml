@@ -6,6 +6,7 @@ apiVersion: 1
 datasources:
   # Loki - 日志查询
   - name: Loki
+    uid: loki
     type: loki
     access: proxy
     url: http://loki:3100
@@ -14,6 +15,7 @@ datasources:
 
   # Prometheus - 指标查询
   - name: Prometheus
+    uid: prometheus
     type: prometheus
     access: proxy
     url: http://prometheus:9090
@@ -22,6 +24,7 @@ datasources:
 
   # Tempo - 分布式追踪查询（查询端口为 3200）
   - name: Tempo
+    uid: tempo
     type: tempo
     access: proxy
     url: http://tempo:3200

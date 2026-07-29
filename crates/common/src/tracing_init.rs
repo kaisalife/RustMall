@@ -8,6 +8,12 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilte
 pub fn init_tracing(service_name: &str, otlp_endpoint: Option<&str>, env_filter: &str) {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(env_filter));
 
+    // 注册 W3C TraceContext propagator，使 gRPC/HTTP 跨服务 trace context 可传播。
+    // 否则全局默认为 NoopTextMapPropagator，inject/extract 均不生效。
+    opentelemetry::global::set_text_map_propagator(
+        opentelemetry::sdk::propagation::TraceContextPropagator::new(),
+    );
+
     // 尝试初始化 OpenTelemetry
     let otlp_layer = otlp_endpoint.and_then(|endpoint| {
         let exporter = opentelemetry_otlp::new_exporter()
