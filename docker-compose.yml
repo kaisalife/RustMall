@@ -318,6 +318,32 @@ services:
       - simple_trade_network
 
   # ============================================
+  # 服务注册与发现
+  # ============================================
+
+  nacos:
+    image: nacos/nacos-server:v2.4.0
+    container_name: simple_trade_nacos
+    environment:
+      MODE: standalone
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+      JVM_XMN: 128m
+    ports:
+      - "8848:8848"
+    expose:
+      - "8848"
+      - "9848"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - simple_trade_network
+
+  # ============================================
   # 可观测性栈
   # ============================================
 

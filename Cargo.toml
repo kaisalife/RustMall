@@ -7,6 +7,7 @@ members = [
     "crates/tower-middleware",
     "crates/idempotency",
     "crates/event-bus",
+    "crates/service-discovery",
     "services/api-gateway",
     "services/auth-service",
     "services/product-service",
@@ -126,6 +127,9 @@ lru = "0.12"
 opentelemetry = { version = "0.20", features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "0.13", features = ["tonic"] }
 tracing-opentelemetry = "0.21"
+
+# Service Discovery
+nacos-sdk = "0.8"
 
 # Benchmarking
 criterion = { version = "0.5", features = ["async_tokio"] }
