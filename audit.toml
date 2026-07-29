@@ -1,0 +1,3 @@
+# cargo-audit 配置
+# cargo-audit v0.22.x 使用 --ignore 命令行参数
+# CI 中通过 cargo audit --ignore RUSTSEC-XXXX-XXXX 实现
