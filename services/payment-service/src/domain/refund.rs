@@ -4,7 +4,6 @@
 //! 退款也支持幂等（通过 idempotency_key 防重复退款）。
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 
 use common::{AppError, AppResult};
 

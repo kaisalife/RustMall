@@ -5,11 +5,13 @@ use crate::application::command::{
     SendVerificationEmailCommand,
 };
 use crate::application::EmailApplicationService;
+use crate::domain::{EmailStatus, EmailType};
 use tonic::{Request, Response, Status};
 
 use proto::email::{
-    email_service_server::EmailService, SendCustomEmailRequest, SendEmailResponse,
-    SendOrderNotificationRequest, SendPasswordResetEmailRequest, SendVerificationEmailRequest,
+    email_service_server::EmailService, GetEmailStatusRequest, GetEmailStatusResponse,
+    SendCustomEmailRequest, SendEmailResponse, SendOrderNotificationRequest,
+    SendPasswordResetEmailRequest, SendVerificationEmailRequest,
 };
 
 /// 邮件 gRPC 服务实现
@@ -123,5 +125,50 @@ impl EmailService for EmailServiceImpl {
             })),
             Err(e) => Err(Status::internal(e.to_string())),
         }
+    }
+
+    async fn get_email_status(
+        &self,
+        request: Request<GetEmailStatusRequest>,
+    ) -> Result<Response<GetEmailStatusResponse>, Status> {
+        let req = request.into_inner();
+        tracing::info!("📨 收到查询邮件状态请求：ID {}", req.id);
+
+        match self.service.get_email_status(req.id).await {
+            Ok(Some(email)) => Ok(Response::new(GetEmailStatusResponse {
+                id: email.id,
+                to_email: email.to_email,
+                username: email.username,
+                subject: email.subject,
+                html_content: email.html_content,
+                email_type: email_type_to_string(email.email_type).to_string(),
+                status: email_status_to_string(email.status).to_string(),
+                message_id: email.message_id,
+                error_message: email.error_message,
+                created_at: email.created_at.to_rfc3339(),
+                updated_at: email.updated_at.to_rfc3339(),
+            })),
+            Ok(None) => Err(Status::not_found(format!("邮件 ID {} 不存在", req.id))),
+            Err(e) => Err(Status::internal(e.to_string())),
+        }
+    }
+}
+
+/// 将邮件类型枚举转换为字符串
+fn email_type_to_string(t: EmailType) -> &'static str {
+    match t {
+        EmailType::Verification => "Verification",
+        EmailType::OrderNotification => "OrderNotification",
+        EmailType::PasswordReset => "PasswordReset",
+        EmailType::Custom => "Custom",
+    }
+}
+
+/// 将邮件状态枚举转换为字符串
+fn email_status_to_string(s: EmailStatus) -> &'static str {
+    match s {
+        EmailStatus::Pending => "Pending",
+        EmailStatus::Sent => "Sent",
+        EmailStatus::Failed => "Failed",
     }
 }

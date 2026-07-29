@@ -23,4 +23,4 @@ pub mod instance;
 pub mod registry;
 
 pub use instance::ServiceInstance;
-pub use registry::{ServiceRegistry, NacosRegistry, NacosConfig};
+pub use registry::{NacosConfig, NacosRegistry, ServiceRegistry};

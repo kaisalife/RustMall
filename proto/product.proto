@@ -8,6 +8,9 @@ service ProductService {
     rpc UpdateProduct(UpdateProductRequest) returns (ProductResponse);
     rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
     rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+    rpc CreateCategory(CreateCategoryRequest) returns (CategoryResponse);
+    rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
+    rpc UpdateCategory(UpdateCategoryRequest) returns (UpdateCategoryResponse);
 }
 
 message CreateProductRequest {
@@ -46,6 +49,7 @@ message ProductResponse {
     uint64 category_id = 5;
     string created_at = 6;
     string updated_at = 7;
+    int32 stock = 8;
 }
 
 message ListProductsRequest {
@@ -61,4 +65,34 @@ message ListProductsResponse {
     int32 total = 2;
     int32 page = 3;
     int32 page_size = 4;
+}
+
+message CreateCategoryRequest {
+    string name = 1;
+    optional uint64 parent_id = 2;
+}
+
+message ListCategoriesRequest {
+}
+
+message CategoryResponse {
+    uint64 category_id = 1;
+    string name = 2;
+    optional uint64 parent_id = 3;
+    string created_at = 4;
+    string updated_at = 5;
+}
+
+message ListCategoriesResponse {
+    repeated CategoryResponse categories = 1;
+}
+
+message UpdateCategoryRequest {
+    uint64 id = 1;
+    optional string name = 2;
+    optional uint64 parent_id = 3;
+}
+
+message UpdateCategoryResponse {
+    bool success = 1;
 }

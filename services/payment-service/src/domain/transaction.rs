@@ -33,7 +33,7 @@ impl TransactionType {
     }
 
     /// 从字符串解析
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse_txn_type(s: &str) -> Self {
         match s.to_uppercase().as_str() {
             "PAY" => TransactionType::Pay,
             "REFUND" => TransactionType::Refund,

@@ -67,6 +67,7 @@ impl JwtValidator {
     }
 }
 
+#[allow(clippy::type_complexity)]
 /// 认证中间件工厂函数
 pub fn create_auth_middleware(
     secret: String,
@@ -112,6 +113,7 @@ pub fn create_auth_middleware(
     }
 }
 
+#[allow(clippy::type_complexity)]
 /// 可选认证中间件工厂函数
 pub fn create_optional_auth_middleware(
     secret: String,

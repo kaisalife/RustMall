@@ -7,6 +7,7 @@ service EmailService {
     rpc SendOrderNotification(SendOrderNotificationRequest) returns (SendEmailResponse);
     rpc SendPasswordResetEmail(SendPasswordResetEmailRequest) returns (SendEmailResponse);
     rpc SendCustomEmail(SendCustomEmailRequest) returns (SendEmailResponse);
+    rpc GetEmailStatus(GetEmailStatusRequest) returns (GetEmailStatusResponse);
 }
 
 message SendVerificationEmailRequest {
@@ -39,4 +40,22 @@ message SendCustomEmailRequest {
 message SendEmailResponse {
     bool success = 1;
     string message_id = 2;
+}
+
+message GetEmailStatusRequest {
+    uint64 id = 1;
+}
+
+message GetEmailStatusResponse {
+    uint64 id = 1;
+    string to_email = 2;
+    optional string username = 3;
+    string subject = 4;
+    string html_content = 5;
+    string email_type = 6;
+    string status = 7;
+    optional string message_id = 8;
+    optional string error_message = 9;
+    string created_at = 10;
+    string updated_at = 11;
 }

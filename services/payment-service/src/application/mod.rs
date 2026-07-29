@@ -12,5 +12,4 @@ pub mod routing;
 pub mod service;
 
 pub use command::*;
-pub use dto::*;
 pub use service::PaymentApplicationService;

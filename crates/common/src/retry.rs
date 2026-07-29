@@ -39,7 +39,7 @@ where
                 );
 
                 tokio::time::sleep(delay).await;
-                delay = delay * 2; // 指数退避
+                delay *= 2; // 指数退避
                 last_error = Some(e);
             }
         }

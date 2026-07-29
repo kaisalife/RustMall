@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use common::AppError;
 
 #[derive(Debug, Clone)]
 pub struct Product {
@@ -20,9 +21,18 @@ impl Product {
         price: f64,
         category_id: u64,
         stock: i32,
-    ) -> Self {
+    ) -> Result<Self, AppError> {
+        // 域模型内部校验：价格必须大于 0
+        if price <= 0.0 {
+            return Err(AppError::invalid_input("Price must be greater than zero"));
+        }
+        // 域模型内部校验：库存不能为负
+        if stock < 0 {
+            return Err(AppError::invalid_input("Stock cannot be negative"));
+        }
+
         let now = Utc::now();
-        Self {
+        Ok(Self {
             id,
             name,
             description,
@@ -31,7 +41,7 @@ impl Product {
             stock,
             created_at: now,
             updated_at: now,
-        }
+        })
     }
 
     pub fn update_name(&mut self, name: String) {
@@ -44,27 +54,18 @@ impl Product {
         self.updated_at = Utc::now();
     }
 
-    pub fn update_price(&mut self, price: f64) {
+    pub fn update_price(&mut self, price: f64) -> Result<(), AppError> {
+        // 域模型内部校验：价格必须大于 0
+        if price <= 0.0 {
+            return Err(AppError::invalid_input("Price must be greater than zero"));
+        }
         self.price = price;
         self.updated_at = Utc::now();
+        Ok(())
     }
 
     pub fn update_category(&mut self, category_id: u64) {
         self.category_id = category_id;
         self.updated_at = Utc::now();
-    }
-
-    pub fn add_stock(&mut self, quantity: i32) {
-        self.stock += quantity;
-        self.updated_at = Utc::now();
-    }
-
-    pub fn deduct_stock(&mut self, quantity: i32) -> Result<(), &'static str> {
-        if self.stock < quantity {
-            return Err("Insufficient stock");
-        }
-        self.stock -= quantity;
-        self.updated_at = Utc::now();
-        Ok(())
     }
 }

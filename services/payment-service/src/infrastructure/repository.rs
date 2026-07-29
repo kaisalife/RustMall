@@ -435,7 +435,7 @@ impl PaymentRecord {
             idempotency_key: self.idempotency_key,
             user_id: self.user_id as u64,
             order_id: self.order_id as u64,
-            amount: Money::new(amount, currency.clone()),
+            amount: Money::new(amount, currency),
             fee: Money::new(fee, currency),
             channel: string_to_channel(&self.channel),
             status: string_to_status(&self.status),

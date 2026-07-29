@@ -31,7 +31,10 @@ fn make_rate_limit_app(max_requests: u32) -> Router {
     let limiter = Arc::new(RateLimiter::new(max_requests, Duration::from_secs(60), 100));
     Router::new()
         .route("/api", get(|| async { "ok" }))
-        .layer(middleware::from_fn(create_rate_limit_middleware(limiter, std::sync::Arc::new(vec![]))))
+        .layer(middleware::from_fn(create_rate_limit_middleware(
+            limiter,
+            std::sync::Arc::new(vec![]),
+        )))
 }
 
 #[tokio::test]

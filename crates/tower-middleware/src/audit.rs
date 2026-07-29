@@ -15,9 +15,6 @@
 use axum::{body::Body, extract::Request, http::Method, response::Response};
 use common::request_context::RequestId;
 
-/// gRPC metadata 中 request_id 的 key
-const REQUEST_ID_HEADER: &str = "x-request-id";
-
 /// 审计中间件层
 #[derive(Clone)]
 pub struct AuditLayer {

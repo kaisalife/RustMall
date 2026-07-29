@@ -118,7 +118,6 @@ fn is_write_method(method: &axum::http::Method) -> bool {
 /// ```
 ///
 /// 注意：axum 的 from_fn 需要闭包捕获 manager，用 Arc 共享。
-
 #[cfg(test)]
 mod tests {
     use super::*;

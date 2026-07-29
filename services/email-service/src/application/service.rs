@@ -149,4 +149,9 @@ impl EmailApplicationService {
             }
         }
     }
+
+    /// 查询邮件状态
+    pub async fn get_email_status(&self, id: u64) -> AppResult<Option<Email>> {
+        self.email_repository.find_by_id(id).await
+    }
 }

@@ -5,6 +5,8 @@ pub struct Inventory {
     pub product_id: u64,
     pub quantity: i32,
     pub reserved_quantity: i32,
+    /// 乐观锁版本号，与数据库 version 列对应
+    pub version: i64,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -14,8 +16,14 @@ impl Inventory {
             product_id,
             quantity,
             reserved_quantity: 0,
+            version: 0,
             updated_at: Utc::now(),
         }
+    }
+
+    /// 持久化成功后递增版本号，使内存对象与数据库保持一致
+    pub fn increment_version(&mut self) {
+        self.version += 1;
     }
 
     pub fn add_stock(&mut self, quantity: i32) -> Result<(), &'static str> {

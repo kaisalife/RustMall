@@ -4,7 +4,6 @@
 //! 对比 f64 运算作为基准线。
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
 fn bench_decimal_add(c: &mut Criterion) {

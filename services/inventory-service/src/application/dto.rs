@@ -3,7 +3,6 @@ pub struct InventoryDto {
     pub product_id: u64,
     pub quantity: i32,
     pub reserved_quantity: i32,
-    pub available_quantity: i32,
     pub updated_at: String,
 }
 

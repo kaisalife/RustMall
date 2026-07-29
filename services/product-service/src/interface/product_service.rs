@@ -3,9 +3,10 @@ use tonic::{Request, Response, Status};
 use crate::application::{command::*, ProductApplicationService};
 
 use proto::product::{
-    product_service_server::ProductService, CreateProductRequest, DeleteProductRequest,
-    GetProductRequest, ListProductsRequest, ListProductsResponse, ProductResponse,
-    UpdateProductRequest,
+    product_service_server::ProductService, CategoryResponse, CreateCategoryRequest,
+    CreateProductRequest, DeleteProductRequest, GetProductRequest, ListCategoriesRequest,
+    ListCategoriesResponse, ListProductsRequest, ListProductsResponse, ProductResponse,
+    UpdateCategoryRequest, UpdateCategoryResponse, UpdateProductRequest,
 };
 
 #[derive(Clone)]
@@ -49,6 +50,7 @@ impl ProductService for ProductServiceImpl {
             category_id: result.category_id,
             created_at: result.created_at,
             updated_at: result.updated_at,
+            stock: result.stock,
         }))
     }
 
@@ -72,6 +74,7 @@ impl ProductService for ProductServiceImpl {
             category_id: result.category_id,
             created_at: result.created_at,
             updated_at: result.updated_at,
+            stock: result.stock,
         }))
     }
 
@@ -103,6 +106,7 @@ impl ProductService for ProductServiceImpl {
             category_id: result.category_id,
             created_at: result.created_at,
             updated_at: result.updated_at,
+            stock: result.stock,
         }))
     }
 
@@ -154,6 +158,7 @@ impl ProductService for ProductServiceImpl {
                 category_id: p.category_id,
                 created_at: p.created_at,
                 updated_at: p.updated_at,
+                stock: p.stock,
             })
             .collect();
 
@@ -163,6 +168,69 @@ impl ProductService for ProductServiceImpl {
             page: result.page,
             page_size: result.page_size,
         }))
+    }
+
+    async fn create_category(
+        &self,
+        request: Request<CreateCategoryRequest>,
+    ) -> Result<Response<CategoryResponse>, Status> {
+        let req = request.into_inner();
+
+        let result = self
+            .service
+            .create_category(req.name, req.parent_id)
+            .await
+            .map_err(app_error_to_status)?;
+
+        Ok(Response::new(CategoryResponse {
+            category_id: result.category_id,
+            name: result.name,
+            parent_id: result.parent_id,
+            created_at: result.created_at,
+            updated_at: result.updated_at,
+        }))
+    }
+
+    async fn list_categories(
+        &self,
+        request: Request<ListCategoriesRequest>,
+    ) -> Result<Response<ListCategoriesResponse>, Status> {
+        let _ = request.into_inner();
+
+        let categories = self
+            .service
+            .list_categories()
+            .await
+            .map_err(app_error_to_status)?;
+
+        let categories = categories
+            .into_iter()
+            .map(|c| CategoryResponse {
+                category_id: c.category_id,
+                name: c.name,
+                parent_id: c.parent_id,
+                created_at: c.created_at,
+                updated_at: c.updated_at,
+            })
+            .collect();
+
+        Ok(Response::new(ListCategoriesResponse { categories }))
+    }
+
+    async fn update_category(
+        &self,
+        request: Request<UpdateCategoryRequest>,
+    ) -> Result<Response<UpdateCategoryResponse>, Status> {
+        let req = request.into_inner();
+
+        let parent_id = req.parent_id.map(Some);
+
+        self.service
+            .update_category(req.id, req.name, parent_id)
+            .await
+            .map_err(app_error_to_status)?;
+
+        Ok(Response::new(UpdateCategoryResponse { success: true }))
     }
 }
 

@@ -59,7 +59,7 @@ impl AuthApplicationService {
         let user_id = self
             .id_generator
             .generate()
-            .map_err(|e| AppError::internal(e))?;
+            .map_err(AppError::internal)?;
 
         // 创建用户实体
         let user = User::new(
@@ -196,6 +196,27 @@ impl AuthApplicationService {
         // 保存
         self.user_repository.update(user).await?;
 
+        Ok(true)
+    }
+
+    pub async fn update_profile(&self, user_id: u64, nickname: Option<String>) -> AppResult<bool> {
+        let mut user = self
+            .user_repository
+            .find_by_id(user_id)
+            .await?
+            .ok_or_else(|| AppError::not_found("User not found"))?;
+
+        if let Some(n) = nickname {
+            user.update_nickname(n);
+        }
+
+        self.user_repository.update(user).await?;
+
+        Ok(true)
+    }
+
+    pub async fn delete_user(&self, user_id: u64) -> AppResult<bool> {
+        self.user_repository.delete(user_id).await?;
         Ok(true)
     }
 }

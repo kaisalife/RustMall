@@ -4,7 +4,7 @@ use axum::{body::Body, http::Request, http::StatusCode, middleware::Next, respon
 use std::time::Instant;
 use tracing::{error, info, warn, Instrument, Level};
 
-use common::request_context::{inject_response_id, RequestId, REQUEST_ID_HEADER};
+use common::request_context::{inject_response_id, RequestId};
 
 /// 日志中间件
 ///

@@ -8,6 +8,8 @@ service AuthService {
     rpc RefreshToken(RefreshTokenRequest) returns (LoginResponse);
     rpc GetUser(GetUserRequest) returns (UserResponse);
     rpc UpdatePassword(UpdatePasswordRequest) returns (UpdatePasswordResponse);
+    rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
+    rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
 }
 
 message RegisterRequest {
@@ -57,5 +59,22 @@ message UpdatePasswordRequest {
 }
 
 message UpdatePasswordResponse {
+    bool success = 1;
+}
+
+message UpdateProfileRequest {
+    uint64 user_id = 1;
+    string nickname = 2;
+}
+
+message UpdateProfileResponse {
+    bool success = 1;
+}
+
+message DeleteUserRequest {
+    uint64 user_id = 1;
+}
+
+message DeleteUserResponse {
     bool success = 1;
 }

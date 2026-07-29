@@ -1,4 +1,7 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // proto 文件位于 crate 目录之外，需显式声明变更监听
+    println!("cargo:rerun-if-changed=../../proto");
+
     tonic_prost_build::configure()
         .build_server(true)
         .build_client(true)

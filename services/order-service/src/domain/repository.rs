@@ -1,4 +1,4 @@
-use super::{Order, OrderItem};
+use super::Order;
 use common::AppResult;
 
 #[async_trait::async_trait]

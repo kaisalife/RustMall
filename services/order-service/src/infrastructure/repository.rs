@@ -41,7 +41,7 @@ impl OrderRepository for OrderRepositoryImpl {
         let item_ids: Vec<i64> = (0..order.items.len())
             .map(|_| self.id_generator.generate().map(|id| id as i64))
             .collect::<Result<_, _>>()
-            .map_err(|e| AppError::internal(e))?;
+            .map_err(AppError::internal)?;
         let product_ids: Vec<i64> = order.items.iter().map(|i| i.product_id as i64).collect();
         let quantities: Vec<i32> = order.items.iter().map(|i| i.quantity).collect();
         let unit_prices: Vec<f64> = order.items.iter().map(|i| i.unit_price).collect();

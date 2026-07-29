@@ -5,11 +5,10 @@
 
 mod repository;
 
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio_stream::StreamExt;
 
-use common::{create_pool, init_tracing, load_config};
+use common::load_config;
 use event_bus::consumer::parse_event;
 use event_bus::{EventEnvelope, EventPayload};
 

@@ -78,7 +78,7 @@ impl PaymentChannel {
     }
 
     /// 从字符串解析
-    pub fn from_str(s: &str) -> AppResult<Self> {
+    pub fn parse_payment_channel(s: &str) -> AppResult<Self> {
         match s.to_uppercase().as_str() {
             "UNKNOWN" => Ok(PaymentChannel::Unknown),
             "WECHAT" => Ok(PaymentChannel::WeChat),
@@ -139,7 +139,7 @@ impl PaymentStatus {
     }
 
     /// 从字符串解析
-    pub fn from_str(s: &str) -> AppResult<Self> {
+    pub fn parse_payment_status(s: &str) -> AppResult<Self> {
         match s.to_uppercase().as_str() {
             "PENDING" => Ok(PaymentStatus::Pending),
             "PROCESSING" => Ok(PaymentStatus::Processing),

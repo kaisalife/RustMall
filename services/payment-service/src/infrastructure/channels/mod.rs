@@ -13,9 +13,7 @@ pub mod alipay;
 pub mod stub;
 pub mod wechat;
 
-pub use alipay::AlipayAdapter;
 pub use stub::StubChannelAdapter;
-pub use wechat::WeChatPayAdapter;
 
 use crate::domain::{Money, PaymentChannel};
 use async_trait::async_trait;

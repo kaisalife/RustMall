@@ -1,7 +1,7 @@
 use sqlx::{query, query_as, query_scalar, FromRow, PgPool};
 
 use crate::domain::{Category, CategoryRepository, Product, ProductRepository};
-use common::{AppError, AppResult};
+use common::AppResult;
 
 #[derive(Clone)]
 pub struct ProductRepositoryImpl {

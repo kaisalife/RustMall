@@ -12,6 +12,9 @@
 //! 注意：当前 `AppConfig` 尚未包含 `payment_service` 配置段，
 //! 服务地址与 worker_id 暂以常量硬编码，后续应补齐配置项。
 
+// payment-service 尚在开发中，部分领域模型与应用服务方法尚未接入调用链。
+#![allow(dead_code)]
+
 mod application;
 mod domain;
 mod infrastructure;

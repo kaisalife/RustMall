@@ -38,23 +38,10 @@ impl ProductApplicationService {
             return Err(AppError::not_found("Category not found"));
         }
 
-        // 验证价格
-        if command.price <= 0.0 {
-            return Err(AppError::invalid_input("Price must be greater than zero"));
-        }
-
-        // 验证库存
-        if command.stock < 0 {
-            return Err(AppError::invalid_input("Stock cannot be negative"));
-        }
-
         // 生成产品ID
-        let product_id = self
-            .id_generator
-            .generate()
-            .map_err(|e| AppError::internal(e))?;
+        let product_id = self.id_generator.generate().map_err(AppError::internal)?;
 
-        // 创建产品实体
+        // 创建产品实体（价格与库存校验由域模型内部完成）
         let product = Product::new(
             product_id,
             command.name,
@@ -62,7 +49,7 @@ impl ProductApplicationService {
             command.price,
             command.category_id,
             command.stock,
-        );
+        )?;
 
         // 保存产品
         let saved_product = self.product_repository.create(product).await?;
@@ -95,10 +82,8 @@ impl ProductApplicationService {
             product.update_description(description);
         }
         if let Some(price) = command.price {
-            if price <= 0.0 {
-                return Err(AppError::invalid_input("Price must be greater than zero"));
-            }
-            product.update_price(price);
+            // 价格校验由域模型内部完成
+            product.update_price(price)?;
         }
         if let Some(category_id) = command.category_id {
             if self
@@ -150,10 +135,7 @@ impl ProductApplicationService {
         name: String,
         parent_id: Option<u64>,
     ) -> AppResult<CategoryDto> {
-        let category_id = self
-            .id_generator
-            .generate()
-            .map_err(|e| AppError::internal(e))?;
+        let category_id = self.id_generator.generate().map_err(AppError::internal)?;
 
         let category = Category::new(category_id, name, parent_id);
         let saved_category = self.category_repository.create(category).await?;
@@ -164,6 +146,27 @@ impl ProductApplicationService {
     pub async fn list_categories(&self) -> AppResult<Vec<CategoryDto>> {
         let categories = self.category_repository.list().await?;
         Ok(categories.into_iter().map(Self::category_to_dto).collect())
+    }
+
+    pub async fn update_category(
+        &self,
+        id: u64,
+        name: Option<String>,
+        parent_id: Option<Option<u64>>,
+    ) -> AppResult<()> {
+        let mut category = self
+            .category_repository
+            .find_by_id(id)
+            .await?
+            .ok_or_else(|| AppError::not_found("Category not found"))?;
+        if let Some(n) = name {
+            category.update_name(n);
+        }
+        if let Some(p) = parent_id {
+            category.update_parent(p);
+        }
+        self.category_repository.update(category).await?;
+        Ok(())
     }
 
     fn product_to_dto(product: Product) -> ProductDto {

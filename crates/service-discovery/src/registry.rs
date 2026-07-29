@@ -61,15 +61,15 @@ impl NacosRegistry {
             .app_name(&config.app_name);
 
         if let (Some(username), Some(password)) = (&config.username, &config.password) {
-            client_props = client_props
-                .auth_username(username)
-                .auth_password(password);
+            client_props = client_props.auth_username(username).auth_password(password);
         }
 
         let naming_service = nacos_sdk::api::naming::NamingServiceBuilder::new(client_props)
             .build()
             .await
-            .map_err(|e| common::AppError::Internal(format!("Failed to create Nacos naming service: {}", e)))?;
+            .map_err(|e| {
+                common::AppError::Internal(format!("Failed to create Nacos naming service: {}", e))
+            })?;
 
         tracing::info!("Nacos naming service connected: {}", config.server_addr);
 
@@ -104,7 +104,10 @@ impl ServiceRegistry for NacosRegistry {
             )
             .await
             .map_err(|e| {
-                common::AppError::Internal(format!("Failed to register service {}: {}", service_name, e))
+                common::AppError::Internal(format!(
+                    "Failed to register service {}: {}",
+                    service_name, e
+                ))
             })?;
 
         tracing::info!("Service registered to Nacos: {}", service_name);
@@ -128,11 +131,19 @@ impl ServiceRegistry for NacosRegistry {
             )
             .await
             .map_err(|e| {
-                common::AppError::Internal(format!("Failed to discover service {}: {}", service_name, e))
+                common::AppError::Internal(format!(
+                    "Failed to discover service {}: {}",
+                    service_name, e
+                ))
             })?;
 
-        let result: Vec<ServiceInstance> = instances.into_iter().map(ServiceInstance::from).collect();
-        tracing::debug!("Discovered {} instances for service: {}", result.len(), service_name);
+        let result: Vec<ServiceInstance> =
+            instances.into_iter().map(ServiceInstance::from).collect();
+        tracing::debug!(
+            "Discovered {} instances for service: {}",
+            result.len(),
+            service_name
+        );
         Ok(result)
     }
 }

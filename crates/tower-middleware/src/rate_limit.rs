@@ -107,6 +107,7 @@ pub fn create_default_rate_limiter() -> RateLimiter {
     RateLimiter::new(60, Duration::from_secs(60), 10000)
 }
 
+#[allow(clippy::type_complexity)]
 /// 限流中间件工厂函数
 /// `whitelist` 中的 IP 直接放行，不消耗令牌
 pub fn create_rate_limit_middleware(

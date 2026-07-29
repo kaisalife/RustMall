@@ -24,16 +24,33 @@ impl InventoryApplicationService {
             return Err(AppError::invalid_input("Quantity must be positive"));
         }
 
-        // 使用原子操作防止超卖
-        let updated = self
-            .inventory_repository
-            .atomic_deduct_stock(command.product_id, command.quantity)
-            .await?;
+        const MAX_RETRIES: usize = 3;
+        for attempt in 0..MAX_RETRIES {
+            let mut inventory = self
+                .inventory_repository
+                .find_by_product_id(command.product_id)
+                .await?
+                .ok_or_else(|| AppError::not_found("Inventory not found for product"))?;
 
-        Ok(DeductStockResult {
-            success: true,
-            remaining: updated.available_quantity(),
-        })
+            inventory
+                .deduct_stock(command.quantity)
+                .map_err(AppError::invalid_input)?;
+
+            match self.inventory_repository.update(&inventory).await {
+                Ok(()) => {
+                    inventory.increment_version();
+                    return Ok(DeductStockResult {
+                        success: true,
+                        remaining: inventory.available_quantity(),
+                    });
+                }
+                Err(AppError::Conflict(_)) if attempt < MAX_RETRIES - 1 => continue,
+                Err(e) => return Err(e),
+            }
+        }
+        Err(AppError::conflict(
+            "Inventory deduct concurrency conflict, retries exhausted",
+        ))
     }
 
     pub async fn add_stock(&self, command: AddStockCommand) -> AppResult<AddStockResult> {
@@ -41,21 +58,27 @@ impl InventoryApplicationService {
             return Err(AppError::invalid_input("Quantity must be positive"));
         }
 
-        let inventory = match self
+        let mut inventory = match self
             .inventory_repository
             .find_by_product_id(command.product_id)
             .await?
         {
-            Some(mut inv) => {
-                inv.add_stock(command.quantity)
-                    .map_err(|e| AppError::invalid_input(e))?;
-                self.inventory_repository.update(inv).await?
-            }
+            Some(inv) => inv,
             None => {
                 let new_inv = Inventory::new(command.product_id, command.quantity);
-                self.inventory_repository.create(new_inv).await?
+                let created = self.inventory_repository.create(new_inv).await?;
+                return Ok(AddStockResult {
+                    success: true,
+                    total: created.quantity,
+                });
             }
         };
+
+        inventory
+            .add_stock(command.quantity)
+            .map_err(AppError::invalid_input)?;
+        self.inventory_repository.update(&inventory).await?;
+        inventory.increment_version();
 
         Ok(AddStockResult {
             success: true,
@@ -70,7 +93,7 @@ impl InventoryApplicationService {
             .await?
             .ok_or_else(|| AppError::not_found("Inventory not found for product"))?;
 
-        Ok(Self::inventory_to_dto(inventory))
+        Ok(Self::inventory_to_dto(&inventory))
     }
 
     pub async fn batch_get_stock(&self, product_ids: Vec<u64>) -> AppResult<Vec<InventoryDto>> {
@@ -80,7 +103,7 @@ impl InventoryApplicationService {
             .await?;
         Ok(inventories
             .into_iter()
-            .map(Self::inventory_to_dto)
+            .map(|inv| Self::inventory_to_dto(&inv))
             .collect())
     }
 
@@ -89,13 +112,30 @@ impl InventoryApplicationService {
             return Err(AppError::invalid_input("Quantity must be positive"));
         }
 
-        // 使用原子操作防止超卖
-        let inventory = self
-            .inventory_repository
-            .atomic_reserve_stock(command.product_id, command.quantity)
-            .await?;
+        const MAX_RETRIES: usize = 3;
+        for attempt in 0..MAX_RETRIES {
+            let mut inventory = self
+                .inventory_repository
+                .find_by_product_id(command.product_id)
+                .await?
+                .ok_or_else(|| AppError::not_found("Inventory not found for product"))?;
 
-        Ok(Self::inventory_to_dto(inventory))
+            inventory
+                .reserve_stock(command.quantity)
+                .map_err(AppError::invalid_input)?;
+
+            match self.inventory_repository.update(&inventory).await {
+                Ok(()) => {
+                    inventory.increment_version();
+                    return Ok(Self::inventory_to_dto(&inventory));
+                }
+                Err(AppError::Conflict(_)) if attempt < MAX_RETRIES - 1 => continue,
+                Err(e) => return Err(e),
+            }
+        }
+        Err(AppError::conflict(
+            "Inventory reserve concurrency conflict, retries exhausted",
+        ))
     }
 
     pub async fn release_reserved_stock(
@@ -106,13 +146,30 @@ impl InventoryApplicationService {
             return Err(AppError::invalid_input("Quantity must be positive"));
         }
 
-        // 使用原子操作释放预留
-        let inventory = self
-            .inventory_repository
-            .atomic_release_stock(command.product_id, command.quantity)
-            .await?;
+        const MAX_RETRIES: usize = 3;
+        for attempt in 0..MAX_RETRIES {
+            let mut inventory = self
+                .inventory_repository
+                .find_by_product_id(command.product_id)
+                .await?
+                .ok_or_else(|| AppError::not_found("Inventory not found for product"))?;
 
-        Ok(Self::inventory_to_dto(inventory))
+            inventory
+                .release_reserved(command.quantity)
+                .map_err(AppError::invalid_input)?;
+
+            match self.inventory_repository.update(&inventory).await {
+                Ok(()) => {
+                    inventory.increment_version();
+                    return Ok(Self::inventory_to_dto(&inventory));
+                }
+                Err(AppError::Conflict(_)) if attempt < MAX_RETRIES - 1 => continue,
+                Err(e) => return Err(e),
+            }
+        }
+        Err(AppError::conflict(
+            "Inventory release concurrency conflict, retries exhausted",
+        ))
     }
 
     /// 批量预留库存，返回每个商品的预留结果
@@ -152,12 +209,11 @@ impl InventoryApplicationService {
         results
     }
 
-    fn inventory_to_dto(inventory: Inventory) -> InventoryDto {
+    fn inventory_to_dto(inventory: &Inventory) -> InventoryDto {
         InventoryDto {
             product_id: inventory.product_id,
             quantity: inventory.quantity,
             reserved_quantity: inventory.reserved_quantity,
-            available_quantity: inventory.available_quantity(),
             updated_at: inventory.updated_at.to_rfc3339(),
         }
     }

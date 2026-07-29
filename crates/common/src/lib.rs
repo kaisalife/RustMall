@@ -10,7 +10,7 @@ pub mod tracing_init;
 pub use async_trait::async_trait;
 pub use config::{
     load_config, AppConfig, DatabaseConfig, EmailConfig, JwtConfig, KafkaConfig,
-    PaymentServiceConfig, RedisConfig, ServiceConfig, TracingConfig, RateLimitConfig,
+    PaymentServiceConfig, RateLimitConfig, RedisConfig, ServiceConfig, TracingConfig,
 };
 pub use crypto::{
     generate_jwt, generate_refresh_token, hash_password, hash_password_async, validate_jwt,

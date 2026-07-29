@@ -11,7 +11,8 @@ fn bench_deduct_stock(c: &mut Criterion) {
         b.iter_batched(
             || Inventory::new(1, 1000000),
             |mut inv| {
-                black_box(inv.deduct_stock(100).unwrap());
+                let _: () = inv.deduct_stock(100).unwrap();
+                black_box(());
             },
             criterion::BatchSize::SmallInput,
         )
@@ -37,7 +38,8 @@ fn bench_reserve_release(c: &mut Criterion) {
                 inv
             },
             |mut inv| {
-                black_box(inv.release_reserved(500).unwrap());
+                let _: () = inv.release_reserved(500).unwrap();
+                black_box(());
             },
             criterion::BatchSize::SmallInput,
         )

@@ -12,6 +12,6 @@ pub mod channels;
 pub mod database;
 pub mod repository;
 
-pub use channels::{AlipayAdapter, PaymentChannelAdapter, StubChannelAdapter, WeChatPayAdapter};
+pub use channels::{PaymentChannelAdapter, StubChannelAdapter};
 pub use database::PaymentDatabase;
 pub use repository::{PgPaymentRepository, PgRefundRepository, PgTransactionRepository};

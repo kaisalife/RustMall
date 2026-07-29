@@ -38,6 +38,7 @@ use common::{AppError, AppResult};
 /// 货币类型（ISO 4217）
 ///
 /// 不同货币的小数位数不同，影响展示和计算精度。
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Currency {
     /// 人民币（2 位小数）
@@ -168,6 +169,7 @@ impl Money {
     /// 转为整数分（仅用于与外部系统交互）
     ///
     /// 注意：高精度币种（如 BTC）会截断为 2 位小数。
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_cents(&self) -> i64 {
         (self.amount * dec!(100)).try_into().unwrap_or(0)
     }
@@ -195,7 +197,7 @@ impl FromStr for Money {
 
     /// 从字符串解析，格式："99.99 CNY"
     fn from_str(s: &str) -> AppResult<Self> {
-        let parts: Vec<&str> = s.trim().split_whitespace().collect();
+        let parts: Vec<&str> = s.split_whitespace().collect();
         if parts.len() != 2 {
             return Err(AppError::invalid_input(format!(
                 "Invalid money format: {}, expected 'amount currency'",

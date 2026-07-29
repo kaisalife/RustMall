@@ -14,6 +14,6 @@ pub async fn create_pool(config: &DatabaseConfig) -> AppResult<PgPool> {
         .max_lifetime(Duration::from_secs(config.max_lifetime_minutes * 60))
         .connect(&config.connection_string())
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
     Ok(pool)
 }

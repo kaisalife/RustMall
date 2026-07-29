@@ -3,9 +3,10 @@ use tonic::{Request, Response, Status};
 use crate::application::{command::*, AuthApplicationService};
 
 use proto::auth::{
-    auth_service_server::AuthService, GetUserRequest, LoginRequest, LoginResponse,
-    RefreshTokenRequest, RegisterRequest, RegisterResponse, UpdatePasswordRequest,
-    UpdatePasswordResponse, UserResponse,
+    auth_service_server::AuthService, DeleteUserRequest, DeleteUserResponse, GetUserRequest,
+    LoginRequest, LoginResponse, RefreshTokenRequest, RegisterRequest, RegisterResponse,
+    UpdatePasswordRequest, UpdatePasswordResponse, UpdateProfileRequest, UpdateProfileResponse,
+    UserResponse,
 };
 
 #[derive(Clone)]
@@ -143,5 +144,41 @@ impl AuthService for AuthServiceImpl {
             .map_err(app_error_to_status)?;
 
         Ok(Response::new(UpdatePasswordResponse { success }))
+    }
+
+    async fn update_profile(
+        &self,
+        request: Request<UpdateProfileRequest>,
+    ) -> Result<Response<UpdateProfileResponse>, Status> {
+        let req = request.into_inner();
+
+        let nickname = if req.nickname.is_empty() {
+            None
+        } else {
+            Some(req.nickname)
+        };
+
+        let success = self
+            .service
+            .update_profile(req.user_id, nickname)
+            .await
+            .map_err(app_error_to_status)?;
+
+        Ok(Response::new(UpdateProfileResponse { success }))
+    }
+
+    async fn delete_user(
+        &self,
+        request: Request<DeleteUserRequest>,
+    ) -> Result<Response<DeleteUserResponse>, Status> {
+        let req = request.into_inner();
+
+        let success = self
+            .service
+            .delete_user(req.user_id)
+            .await
+            .map_err(app_error_to_status)?;
+
+        Ok(Response::new(DeleteUserResponse { success }))
     }
 }

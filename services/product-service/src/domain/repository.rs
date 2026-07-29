@@ -23,6 +23,7 @@ pub trait CategoryRepository: Send + Sync + 'static {
     async fn create(&self, category: Category) -> AppResult<Category>;
     async fn find_by_id(&self, id: u64) -> AppResult<Option<Category>>;
     async fn update(&self, category: Category) -> AppResult<Category>;
+    #[allow(dead_code)]
     async fn delete(&self, id: u64) -> AppResult<()>;
     async fn list(&self) -> AppResult<Vec<Category>>;
 }

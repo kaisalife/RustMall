@@ -49,7 +49,7 @@ impl OrderApplicationService {
         let order_id = self
             .id_generator
             .generate()
-            .map_err(|e| AppError::internal(e))?;
+            .map_err(AppError::internal)?;
 
         let order = Order::new(order_id, user_id, order_items);
         let saved_order = self.order_repository.create(order).await?;
