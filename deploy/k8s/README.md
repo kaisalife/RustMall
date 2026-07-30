@@ -1,188 +1,168 @@
-# Simple Trade — Kubernetes 部署
-
-本目录包含 simple_trade 项目的完整 Kubernetes 编排 manifests，使用 Kustomize 进行一键部署。
+# Simple Trade - Kubernetes 部署指南
 
 ## 目录结构
 
 ```
 deploy/k8s/
-├── namespace.yaml              # Namespace 定义
-├── configmap.yaml              # 全局非敏感配置
-├── secrets.yaml                # 敏感配置（base64 编码，生产环境务必替换）
-├── kustomization.yaml          # Kustomize 入口
-├── postgres/                   # PostgreSQL 15 StatefulSet + PVC
-├── redis/                      # Redis 7 Deployment
-├── kafka/                      # Kafka 3.7 (KRaft 模式) Deployment
-├── nacos/                      # Nacos 2.4 (standalone) Deployment
-├── auth-service/               # 认证服务 (gRPC :50051, 2 副本)
-├── product-service/            # 商品服务 (gRPC :50052, 2 副本)
-├── order-service/              # 订单服务 (gRPC :50053, 2 副本)
-├── inventory-service/          # 库存服务 (gRPC :50054, 2 副本)
-├── email-service/              # 邮件服务 (gRPC :50055, 1 副本)
-├── payment-service/            # 支付服务 (gRPC :50056, 1 副本)
-├── api-gateway/                # API 网关 (HTTP :8080, 2 副本, LoadBalancer + Ingress)
-├── hpa/                        # 水平 Pod 自动扩缩容
-└── README.md                   # 本文件
+├── base/                          # 通用基础配置（所有环境共享）
+│   ├── namespace.yaml             # Namespace: simple-trade
+│   ├── configmap.yaml             # 共享配置（Nacos/Kafka/Redis/DB/JWT）
+│   ├── secrets.yaml               # 占位符（<REPLACE_ME>，生产必须替换）
+│   ├── external-services.yaml     # ExternalName Service（PG/Redis/Kafka/Nacos）
+│   ├── priority-class.yaml        # 3 级优先级（critical/high/standard）
+│   ├── network-policy.yaml        # 默认拒绝 + 白名单
+│   ├── pod-disruption-budgets.yaml # 7 个 PDB（保证最小可用）
+│   ├── services/                  # 8 个微服务 Deployment + Service
+│   ├── api-gateway/ingress.yaml   # Nginx Ingress
+│   ├── hpa/                       # 3 个 HPA（自动扩缩容）
+│   └── kustomization.yaml
+│
+├── overlays/
+│   ├── dev/                       # 开发环境
+│   │   ├── kustomization.yaml
+│   │   ├── external-services-patch.yaml  # 指向 localhost
+│   │   └── config-patch.yaml             # ConfigMap 指向 localhost
+│   │
+│   └── prod/                      # 生产环境
+│       ├── kustomization.yaml
+│       ├── external-services-patch.yaml  # 占位符（替换为云托管地址）
+│       ├── config-patch.yaml             # 占位符（替换为生产配置）
+│       ├── secrets-patch.yaml            # 占位符（替换为真实凭据）
+│       └── replicas-patch.yaml           # 提高副本数
+│
+└── README.md                      # 本文件
 ```
-
-## 前置条件
-
-1. **Kubernetes 集群** — 1.24+（gRPC probe 稳定特性）
-2. **kubectl** — 已配置集群访问
-3. **metrics-server** — 集群中已安装（HPA 依赖）
-4. **Ingress Controller** — 如 nginx-ingress（可选，用于 Ingress 路由）
-5. **GHCR 镜像访问** — 集群节点可拉取 `ghcr.io/kaisalife/rustmall/*` 镜像
 
 ## 快速部署
 
-```bash
-# 一键部署所有资源
-kubectl apply -k deploy/k8s/
+### 开发环境
 
-# 或使用 kustomize CLI
-kustomize build deploy/k8s/ | kubectl apply -f -
+```bash
+# 前提：本地已通过 docker-compose 启动 PG/Redis/Kafka/Nacos
+kubectl apply -k deploy/k8s/overlays/dev/
 ```
 
-## 查看状态
+### 生产环境
+
+**第 1 步：替换配置**
+
+编辑 `deploy/k8s/overlays/prod/` 下的 4 个 patch 文件：
+
+| 文件 | 需要替换的内容 |
+|------|---------------|
+| `external-services-patch.yaml` | PG/Redis/Kafka/Nacos 的 ExternalName 地址 |
+| `config-patch.yaml` | ConfigMap 中的 DB_HOST/REDIS_URL/KAFKA_BROKERS 等 |
+| `secrets-patch.yaml` | DB 密码/JWT Secret/SMTP 密码 |
+| `replicas-patch.yaml` | 副本数（可选，已有默认值） |
+
+**第 2 步：部署**
 
 ```bash
-# 查看所有资源
-kubectl get all -n simple-trade
+kubectl apply -k deploy/k8s/overlays/prod/
+```
 
-# 查看 Pod 状态
-kubectl get pods -n simple-trade -o wide
+**第 3 步：验证**
 
-# 查看服务
-kubectl get svc -n simple-trade
+```bash
+kubectl -n simple-trade get pods
+kubectl -n simple-trade get hpa
+kubectl -n simple-trade get ingress
+```
 
-# 查看 Ingress
-kubectl get ingress -n simple-trade
+## 设计决策
+
+### 1. 基础设施不在 K8s 内运行
+
+PostgreSQL、Redis、Kafka、Nacos 通过 **ExternalName Service** 指向集群外部。
+
+**原因**：K8s 擅长管理无状态应用，不擅长管理有状态数据库。数据库的备份、主从切换、Point-in-Time 恢复应由云托管服务（AWS RDS、ElastiCache、MSK）处理。
+
+### 2. Kustomize Overlay 分层
+
+- `base/` 包含所有环境共享的配置
+- `overlays/dev/` 覆盖地址为 localhost
+- `overlays/prod/` 覆盖地址为云托管服务
+
+生产部署只需修改 `overlays/prod/` 下的 4 个文件。
+
+### 3. Secrets 管理
+
+当前使用 `stringData` 占位符 `<REPLACE_ME>`。
+
+**生产环境推荐方案**（按安全等级递增）：
+- Sealed Secrets：加密后可安全存入 Git
+- External Secrets Operator：从 AWS Secrets Manager / HashiCorp Vault 拉取
+- Bitnami Sealed Secrets + ESO 组合
+
+### 4. 可靠性保障
+
+| 机制 | 说明 |
+|------|------|
+| **PodDisruptionBudget** | 7 个微服务各设 `minAvailable: 1`，节点维护时保证至少 1 个 Pod 可用 |
+| **NetworkPolicy** | 默认拒绝所有入站，仅允许 api-gateway 被外部访问、gateway 访问后端、order 访问 inventory |
+| **PriorityClass** | 3 级优先级：critical(api-gateway) > high(auth/product/order/inventory) > standard(email/payment/log) |
+| **init container** | 每个微服务启动前等待 PostgreSQL 就绪 |
+| **滚动更新** | `maxUnavailable: 0, maxSurge: 1`，确保更新期间不减少可用 Pod |
+| **HPA** | api-gateway(2-10)、auth/product(2-6)，CPU 70% + Memory 80% 触发扩容 |
+| **gRPC Probe** | 后端服务使用 gRPC readiness/liveness probe（K8s 1.24+） |
+
+### 5. 监控栈
+
+监控栈（Prometheus + Loki + Tempo + Grafana）不在 K8s manifests 中。
+
+**推荐安装方式**：
+```bash
+# 一键安装 kube-prometheus-stack
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install monitoring prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
+
+# 应用微服务通过 /metrics 暴露 Prometheus 指标
+# 日志通过 Promtail 采集到 Loki
+# 追踪通过 OTLP 发送到 Tempo
+```
+
+## 从 CI/CD 部署
+
+GitHub Actions CD 流水线（`.github/workflows/cd.yml`）支持两种部署方式：
+
+### Docker Compose（默认）
+
+打 tag `v*.*.*` 时自动触发，SSH 到服务器执行 `docker-compose up -d`。
+
+### Kubernetes
+
+在 GitHub Secrets 中配置 `KUBECONFIG`（base64 编码的 kubeconfig），CD 会执行：
+
+```bash
+kubectl apply -k deploy/k8s/overlays/prod/
+```
+
+详见 `.github/workflows/cd.yml` 中的 `deploy-k8s` job。
+
+## 常用命令
+
+```bash
+# 预览渲染结果（不实际部署）
+kubectl kustomize deploy/k8s/overlays/dev/
+kubectl kustomize deploy/k8s/overlays/prod/
+
+# 部署
+kubectl apply -k deploy/k8s/overlays/dev/
+
+# 查看资源
+kubectl -n simple-trade get all
+kubectl -n simple-trade get pdb
+kubectl -n simple-trade get networkpolicy
 
 # 查看 HPA 状态
-kubectl get hpa -n simple-trade
+kubectl -n simple-trade get hpa
 
-# 查看 ConfigMap 和 Secret
-kubectl get configmap,secret -n simple-trade
+# 滚动重启
+kubectl -n simple-trade rollout restart deployment/api-gateway
 
-# 查看 PVC
-kubectl get pvc -n simple-trade
+# 查看滚动更新状态
+kubectl -n simple-trade rollout status deployment/api-gateway
 
-# 查看某个 Pod 的日志
-kubectl logs -f -n simple-trade deployment/api-gateway
-
-# 进入 Pod 调试
-kubectl exec -it -n simple-trade deployment/api-gateway -- /bin/bash
+# 删除
+kubectl delete -k deploy/k8s/overlays/dev/
 ```
-
-## 访问服务
-
-### 通过 LoadBalancer
-
-```bash
-# 获取 api-gateway 的外部 IP
-kubectl get svc api-gateway -n simple-trade
-# 使用 EXTERNAL-IP:8080 访问
-```
-
-### 通过 Ingress
-
-将域名 `api.simple-trade.com` 解析到 Ingress Controller 的 LoadBalancer IP，然后访问 `http://api.simple-trade.com`。
-
-### 通过 port-forward（本地调试）
-
-```bash
-kubectl port-forward -n simple-trade svc/api-gateway 8080:8080
-# 访问 http://localhost:8080
-```
-
-## 配置说明
-
-### 环境变量映射
-
-项目使用 [figment](https://crates.io/crates/figment) 加载配置，环境变量前缀为 `APP_`，分隔符为 `__`：
-
-| 环境变量                          | 配置路径                |
-| --------------------------------- | ----------------------- |
-| `APP_DATABASE__HOST`              | `database.host`         |
-| `APP_AUTH_SERVICE__PORT`          | `auth_service.port`     |
-| `APP_NACOS__SERVER_ADDR`          | `nacos.server_addr`     |
-| `APP_KAFKA__BROKERS`              | `kafka.brokers`         |
-
-### ConfigMap（非敏感配置）
-
-`configmap.yaml` 包含所有服务共享的配置：Nacos 地址、Kafka brokers、Redis URL、Tracing endpoint、worker_id、JWT 过期时间、限流开关等。
-
-### Secrets（敏感配置）
-
-`secrets.yaml` 包含 base64 编码的敏感数据：
-
-| Secret Key                | 说明                  | 默认值（需替换）      |
-| ------------------------- | --------------------- | --------------------- |
-| `APP_DATABASE__USERNAME`  | PostgreSQL 用户名      | `postgres`            |
-| `APP_DATABASE__PASSWORD`  | PostgreSQL 密码        | `postgres`            |
-| `APP_DATABASE__DATABASE`  | PostgreSQL 数据库名    | `simple_trade`        |
-| `APP_JWT__SECRET`         | JWT 签名密钥           | 需替换为强随机值      |
-| `APP_EMAIL__SMTP_PASSWORD`| SMTP 邮箱密码          | 需替换为实际密码      |
-
-> **生产环境务必替换所有 Secret 值！**
->
-> ```bash
-> # 生成 base64 编码的值
-> echo -n 'your-password' | base64
-> ```
-
-### 各服务数据库连接池大小
-
-| 服务                | max_connections |
-| ------------------- | --------------- |
-| auth-service        | 20              |
-| product-service     | 40              |
-| order-service       | 30              |
-| inventory-service   | 30              |
-| email-service       | 10              |
-| payment-service     | 10              |
-| api-gateway         | 50（配置默认值） |
-
-## HPA 自动扩缩容
-
-| 服务             | 最小副本 | 最大副本 | 扩缩容指标               |
-| ---------------- | -------- | -------- | ------------------------ |
-| api-gateway      | 2        | 10       | CPU 70% + Memory 80%    |
-| auth-service     | 2        | 6        | CPU 70%                  |
-| product-service  | 2        | 6        | CPU 70%                  |
-
-> HPA 依赖集群中已安装 metrics-server。
-
-## 更新部署
-
-```bash
-# 更新镜像版本（以 auth-service 为例）
-kubectl set image deployment/auth-service \
-  auth-service=ghcr.io/kaisalife/rustmall/auth-service:v1.2.0 \
-  -n simple-trade
-
-# 滚动更新状态
-kubectl rollout status deployment/auth-service -n simple-trade
-
-# 回滚
-kubectl rollout undo deployment/auth-service -n simple-trade
-```
-
-## 清理
-
-```bash
-# 删除所有资源（保留 Namespace 外的 PV）
-kubectl delete -k deploy/k8s/
-
-# 强制删除 Namespace（包括所有资源）
-kubectl delete namespace simple-trade
-```
-
-## 注意事项
-
-1. **gRPC Probe** — 微服务使用 gRPC 健康检查，需要 Kubernetes 1.24+
-2. **镜像拉取** — Docker 镜像从 GHCR 拉取，确保集群节点有访问权限
-3. **PostgreSQL 数据** — 使用 PVC 持久化，删除 StatefulSet 不会删除 PVC
-4. **Kafka KRaft** — 单节点 KRaft 模式，适合开发/测试，生产环境建议使用多副本
-5. **Nacos standalone** — 单节点模式，生产环境建议集群部署
-6. **可观测性** — Tracing endpoint 默认指向 `tempo:4317`，需单独部署可观测性栈

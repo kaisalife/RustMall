@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+  namespace: simple-trade
+  labels:
+    app: product-service
+    app.kubernetes.io/part-of: simple-trade
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      priorityClassName: high-priority
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:15-alpine
+          command: ['sh', '-c', 'until pg_isready -h postgres -p 5432; do echo "Waiting for PostgreSQL..."; sleep 2; done;']
+      containers:
+        - name: product-service
+          image: ghcr.io/kaisalife/rustmall/product-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 50052
+              name: grpc
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          env:
+            - name: APP_PRODUCT_SERVICE__HOST
+              value: "0.0.0.0"
+            - name: APP_PRODUCT_SERVICE__PORT
+              value: "50052"
+            - name: APP_PRODUCT_SERVICE__ADVERTISE_HOST
+              value: "product-service"
+            - name: APP_DATABASE__MAX_CONNECTIONS
+              value: "40"
+            - name: APP_NACOS__ENABLED
+              value: "true"
+          readinessProbe:
+            grpc:
+              port: 50052
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            grpc:
+              port: 50052
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: simple-trade
+  labels:
+    app: product-service
+    app.kubernetes.io/part-of: simple-trade
+spec:
+  selector:
+    app: product-service
+  ports:
+    - port: 50052
+      targetPort: 50052
+      name: grpc
+  type: ClusterIP

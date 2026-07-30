@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: simple-trade
+  labels:
+    app.kubernetes.io/part-of: simple-trade
+spec:
+  type: ExternalName
+  externalName: postgres.external
+  ports:
+    - port: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: simple-trade
+  labels:
+    app.kubernetes.io/part-of: simple-trade
+spec:
+  type: ExternalName
+  externalName: redis.external
+  ports:
+    - port: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: simple-trade
+  labels:
+    app.kubernetes.io/part-of: simple-trade
+spec:
+  type: ExternalName
+  externalName: kafka.external
+  ports:
+    - port: 9092
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nacos
+  namespace: simple-trade
+  labels:
+    app.kubernetes.io/part-of: simple-trade
+spec:
+  type: ExternalName
+  externalName: nacos.external
+  ports:
+    - port: 8848

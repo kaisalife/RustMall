@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: simple-trade
+  labels:
+    app: payment-service
+    app.kubernetes.io/part-of: simple-trade
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      priorityClassName: standard
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:15-alpine
+          command: ['sh', '-c', 'until pg_isready -h postgres -p 5432; do echo "Waiting for PostgreSQL..."; sleep 2; done;']
+      containers:
+        - name: payment-service
+          image: ghcr.io/kaisalife/rustmall/payment-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 50056
+              name: grpc
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          env:
+            - name: APP_PAYMENT_SERVICE__HOST
+              value: "0.0.0.0"
+            - name: APP_PAYMENT_SERVICE__PORT
+              value: "50056"
+            - name: APP_PAYMENT_SERVICE__ADVERTISE_HOST
+              value: "payment-service"
+            - name: APP_DATABASE__MAX_CONNECTIONS
+              value: "10"
+            - name: APP_NACOS__ENABLED
+              value: "true"
+          readinessProbe:
+            grpc:
+              port: 50056
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            grpc:
+              port: 50056
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: simple-trade
+  labels:
+    app: payment-service
+    app.kubernetes.io/part-of: simple-trade
+spec:
+  selector:
+    app: payment-service
+  ports:
+    - port: 50056
+      targetPort: 50056
+      name: grpc
+  type: ClusterIP

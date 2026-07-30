@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: simple-trade
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - external-services.yaml
+  - priority-class.yaml
+  - network-policy.yaml
+  - pod-disruption-budgets.yaml
+  - services/api-gateway.yaml
+  - services/auth-service.yaml
+  - services/product-service.yaml
+  - services/order-service.yaml
+  - services/inventory-service.yaml
+  - services/email-service.yaml
+  - services/payment-service.yaml
+  - services/log-service.yaml
+  - api-gateway/ingress.yaml
+  - hpa/api-gateway-hpa.yaml
+  - hpa/auth-service-hpa.yaml
+  - hpa/product-service-hpa.yaml

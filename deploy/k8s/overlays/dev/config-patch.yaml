@@ -1,0 +1,11 @@
+# Dev: ConfigMap 指向本地 Docker Compose 服务
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  APP_DATABASE__HOST: "localhost"
+  APP_REDIS__URL: "redis://localhost:6379"
+  APP_KAFKA__BROKERS: "localhost:9092"
+  APP_NACOS__SERVER_ADDR: "localhost:8848"
+  APP_TRACING__OTLP_ENDPOINT: "http://localhost:4317"

@@ -1,0 +1,95 @@
+# 1. 默认拒绝所有入站流量
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: simple-trade
+  labels:
+    app.kubernetes.io/part-of: simple-trade
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+# 2. 允许 api-gateway 被外部访问（允许所有来源）
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-gateway-ingress
+  namespace: simple-trade
+  labels:
+    app: api-gateway
+    app.kubernetes.io/part-of: simple-trade
+spec:
+  podSelector:
+    matchLabels:
+      app: api-gateway
+  policyTypes:
+    - Ingress
+  ingress:
+    - from: []
+---
+# 3. 允许 api-gateway 访问所有后端 gRPC 服务
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-to-backend
+  namespace: simple-trade
+  labels:
+    app.kubernetes.io/part-of: simple-trade
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - auth-service
+          - product-service
+          - order-service
+          - inventory-service
+          - email-service
+          - payment-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api-gateway
+---
+# 4. 允许 order-service 访问 inventory-service
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-order-to-inventory
+  namespace: simple-trade
+  labels:
+    app.kubernetes.io/part-of: simple-trade
+spec:
+  podSelector:
+    matchLabels:
+      app: inventory-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: order-service
+---
+# 5. 允许所有服务访问外部基础设施（PG/Redis/Kafka/Nacos）
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-to-infrastructure
+  namespace: simple-trade
+  labels:
+    app.kubernetes.io/part-of: simple-trade
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0

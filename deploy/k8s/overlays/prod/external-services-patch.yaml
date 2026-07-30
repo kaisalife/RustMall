@@ -1,0 +1,29 @@
+# Prod: ExternalName 指向云托管服务
+# 替换 <REPLACE_ME> 为真实地址
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  externalName: <REPLACE_ME>.rds.amazonaws.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  externalName: <REPLACE_ME>.elasticache.amazonaws.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+spec:
+  externalName: <REPLACE_ME>.msk.amazonaws.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nacos
+spec:
+  externalName: <REPLACE_ME>:8848
