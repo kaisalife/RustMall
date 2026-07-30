@@ -27,10 +27,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = load_config()?;
 
     // 初始化日志（含 OpenTelemetry 分布式追踪）
+    let filter = if cfg!(debug_assertions) {
+        "api_gateway=debug,axum=info,tower_http=debug"
+    } else {
+        "api_gateway=info,axum=info,tower_http=info"
+    };
     init_tracing(
         "api-gateway",
         config.tracing.otlp_endpoint.as_deref(),
-        "api_gateway=debug,axum=info,tower_http=debug",
+        filter,
     );
     let addr = format!("{}:{}", config.gateway.host, config.gateway.port);
 
@@ -180,11 +185,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(protected_routes)
         // 健康检查（检查后端服务连通性）
         .route("/health", axum::routing::get(health_check_handler))
-        // 压测端点（生产环境移除）
-        .route("/bench/ping", axum::routing::get(ping_handler))
-        .route("/bench/echo/:id", axum::routing::get(echo_handler))
         // Prometheus 指标端点
-        .route("/metrics", axum::routing::get(metrics_handler))
+        .route("/metrics", axum::routing::get(metrics_handler));
+
+    // 压测端点（仅开发环境注册）
+    let app = if cfg!(debug_assertions) {
+        app.route("/bench/ping", axum::routing::get(ping_handler))
+            .route("/bench/echo/:id", axum::routing::get(echo_handler))
+    } else {
+        app
+    };
+
+    let app = app
         // 全局中间件
         .layer(AuditLayer::new(event_producer))
         .layer(MetricsMiddleware::new())

@@ -20,10 +20,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = load_config()?;
 
     // Initialize logging (with OpenTelemetry)
+    let filter = if cfg!(debug_assertions) {
+        "auth_service=debug,tonic=info,sqlx=debug"
+    } else {
+        "auth_service=info,tonic=info,sqlx=info"
+    };
     init_tracing(
         "auth-service",
         config.tracing.otlp_endpoint.as_deref(),
-        "auth_service=debug,tonic=info,sqlx=debug",
+        filter,
     );
 
     tracing::info!("========================================");

@@ -6,6 +6,9 @@ metadata:
   labels:
     app.kubernetes.io/part-of: simple-trade
 data:
+  # ---- 运行环境 ----
+  APP_ENV: "development"
+
   # ---- Nacos 服务发现 ----
   APP_NACOS__SERVER_ADDR: "nacos:8848"
   APP_NACOS__ENABLED: "true"
@@ -33,10 +36,11 @@ data:
   # ---- JWT（非 secret 部分）----
   APP_JWT__EXPIRATION_HOURS: "1"
   APP_JWT__REFRESH_EXPIRATION_HOURS: "168"
-  APP_JWT__BCRYPT_COST: "10"
+  APP_JWT__BCRYPT_COST: "12"
 
   # ---- 限流 ----
   APP_RATE_LIMIT__ENABLED: "true"
+  APP_RATE_LIMIT__WHITELIST_IPS: "[\"127.0.0.1\",\"::1\"]"
 
   # ---- 邮件（非敏感部分）----
   APP_EMAIL__SMTP_HOST: "smtp.gmail.com"

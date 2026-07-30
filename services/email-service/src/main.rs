@@ -18,10 +18,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = load_config()?;
 
     // 初始化日志（含 OpenTelemetry 分布式追踪）
+    let filter = if cfg!(debug_assertions) {
+        "email_service=debug,tonic=info"
+    } else {
+        "email_service=info,tonic=info"
+    };
     init_tracing(
         "email-service",
         config.tracing.otlp_endpoint.as_deref(),
-        "email_service=debug,tonic=info",
+        filter,
     );
 
     tracing::info!("========================================");

@@ -1,4 +1,6 @@
 # API Gateway Configuration
+env = "development"
+
 [gateway]
 host = "127.0.0.1"
 port = 8080

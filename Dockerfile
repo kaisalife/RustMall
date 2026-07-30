@@ -99,6 +99,6 @@ COPY --from=builder /app/target/release/${SERVICE} ./app
 
 RUN chmod +x ./app
 
-EXPOSE 8080 50051 50052 50053 50054 50055
+EXPOSE 8080 50051 50052 50053 50054 50055 50056
 
 CMD ["./app"]

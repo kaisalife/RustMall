@@ -15,10 +15,15 @@ use tonic::transport::Server;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = load_config()?;
 
+    let filter = if cfg!(debug_assertions) {
+        "order_service=debug,tonic=info"
+    } else {
+        "order_service=info,tonic=info"
+    };
     init_tracing(
         "order-service",
         config.tracing.otlp_endpoint.as_deref(),
-        "order_service=debug,tonic=info",
+        filter,
     );
 
     let addr = format!(

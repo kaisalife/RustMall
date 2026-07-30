@@ -37,10 +37,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = load_config()?;
 
     // 2. 初始化日志（含 OpenTelemetry 分布式追踪）
+    let filter = if cfg!(debug_assertions) {
+        "payment_service=debug,tonic=info"
+    } else {
+        "payment_service=info,tonic=info"
+    };
     init_tracing(
         "payment-service",
         config.tracing.otlp_endpoint.as_deref(),
-        "payment_service=debug,tonic=info",
+        filter,
     );
 
     let addr = format!(
@@ -70,7 +75,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 4.3 渠道适配器：开发环境使用测试桩，生产环境替换为真实适配器
     //     （WeChatPayAdapter / AlipayAdapter），由应用服务内部的路由器按渠道路由。
-    let channel_adapter: Arc<dyn PaymentChannelAdapter> = Arc::new(StubChannelAdapter::new());
+    let channel_adapter: Arc<dyn PaymentChannelAdapter> = if cfg!(debug_assertions) {
+        tracing::warn!("Using StubChannelAdapter in debug build - payments will be simulated");
+        Arc::new(StubChannelAdapter::new())
+    } else {
+        // 生产环境使用 StubChannelAdapter 作为占位
+        // 替换为真实适配器：WeChatPayAdapter / AlipayAdapter
+        tracing::warn!("Using StubChannelAdapter in release build - replace with real adapter before production!");
+        Arc::new(StubChannelAdapter::new())
+    };
 
     // 4.4 应用服务：编排仓储、幂等、路由、渠道、ID 生成
     //     幂等服务（IdempotencyService）与渠道路由（PaymentRouter）在应用服务内部构造，

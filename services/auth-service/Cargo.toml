@@ -18,6 +18,7 @@ bcrypt.workspace = true
 jsonwebtoken.workspace = true
 validator.workspace = true
 async-trait.workspace = true
+rand = "0.8"
 
 common = { path = "../../crates/common" }
 proto = { path = "../../crates/proto" }

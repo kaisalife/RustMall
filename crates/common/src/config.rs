@@ -26,6 +26,9 @@ pub struct AppConfig {
     pub rate_limit: RateLimitConfig,
     #[serde(default)]
     pub nacos: NacosConfigSection,
+    /// 运行环境标识（"development" / "production"）
+    #[serde(default = "default_env")]
+    pub env: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -161,6 +164,12 @@ pub struct KafkaConfig {
     pub consumer_group: String,
 }
 
+impl AppConfig {
+    pub fn is_production(&self) -> bool {
+        self.env == "production"
+    }
+}
+
 pub fn load_config() -> AppResult<AppConfig> {
     let figment = Figment::new()
         .merge(Toml::file("config/base.toml"))
@@ -178,6 +187,10 @@ pub fn load_config() -> AppResult<AppConfig> {
     }
 
     Ok(config)
+}
+
+fn default_env() -> String {
+    "development".to_string()
 }
 
 fn default_grpc_timeout() -> u64 {

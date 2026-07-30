@@ -73,7 +73,11 @@ impl AuthApplicationService {
         if let Some(mut email_client) = self.email_client.clone() {
             let to_email = saved_user.email.clone();
             let username = saved_user.nickname.clone();
-            let verification_code = "123456".to_string(); // 实际应用中应该生成随机码
+            let verification_code = if cfg!(debug_assertions) {
+                "123456".to_string()
+            } else {
+                format!("{:06}", rand::random::<u32>() % 1_000_000)
+            };
             tracing::info!("Verification email queued for {}", to_email);
             tokio::spawn(async move {
                 if let Err(e) = email_client

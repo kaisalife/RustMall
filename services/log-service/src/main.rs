@@ -21,10 +21,15 @@ const FLUSH_INTERVAL: Duration = Duration::from_secs(2);
 async fn main() {
     let config = load_config().expect("Failed to load config");
 
+    let filter = if cfg!(debug_assertions) {
+        "log_service=debug"
+    } else {
+        "log_service=info"
+    };
     common::init_tracing(
         "log-service",
         config.tracing.otlp_endpoint.as_deref(),
-        "log_service=info",
+        filter,
     );
 
     tracing::info!("========================================");
